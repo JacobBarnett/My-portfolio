@@ -1,5 +1,7 @@
 import { useEffect } from "react";
 import "./Portfolio.css";
+import { useState } from "react";
+import TicTacToe from "./TicTacToe";
 
 export default function Portfolio() {
   // Scroll reveal effect
