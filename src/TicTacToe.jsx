@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import "./TicTacToe.css";
-
+import { Link } from "react-router-dom";
 // ── WIN CONDITIONS ──
 const WINNING_LINES = [
   [0, 1, 2],
@@ -208,6 +208,13 @@ export default function TicTacToe() {
   return (
     <div className="ttt-wrapper">
       <div className="ttt-header">
+        <Link
+          to="/"
+          className="btn-ttt btn-outline-ttt"
+          style={{ textDecoration: "none", marginBottom: "1rem" }}
+        >
+          ← Back to Portfolio
+        </Link>
         <h1 className="ttt-title">
           Tic<span>.</span>Tac<span>.</span>Toe
         </h1>

@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import "./Portfolio.css";
 import { useState } from "react";
 import TicTacToe from "./TicTacToe";
+import { Link } from "react-router-dom";
 
 export default function Portfolio() {
   // Scroll reveal effect
@@ -185,34 +186,74 @@ export default function Portfolio() {
             <h2 className="section-title">Projects</h2>
           </div>
           <div className="projects-grid">
-            {[
-              { num: "01", tag: "Full Stack · Placeholder" },
-              { num: "02", tag: "Frontend · Placeholder" },
-              { num: "03", tag: "Backend · Placeholder" },
-            ].map(({ num, tag }) => (
-              <div className="project-card reveal" key={num}>
-                <div className="project-number">{num}</div>
-                <div className="project-tag">{tag}</div>
-                <h3 className="project-title">Project Title Coming Soon</h3>
-                <p className="project-desc">
-                  A brief description of what this project does, the problem it
-                  solves, and what technologies were used to build it. Replace
-                  with your real project details.
-                </p>
-                <div className="project-links">
-                  <a href="#" className="project-link">
-                    Live Demo →
-                  </a>
-                  <a href="#" className="project-link">
-                    GitHub →
-                  </a>
-                </div>
+            {/* Project 01 - Tic Tac Toe */}
+            <div className="project-card reveal">
+              <div className="project-number">01</div>
+              <div className="project-tag">Full Stack · React</div>
+              <h3 className="project-title">Tic Tac Toe vs AI</h3>
+              <p className="project-desc">
+                A Tic Tac Toe game featuring an unbeatable AI opponent built
+                with the Minimax algorithm and alpha-beta pruning. Three
+                difficulty levels — Easy, Medium, and Hard.
+              </p>
+              <div className="project-links">
+                <Link to="/tictactoe" className="project-link">
+                  Live Demo →
+                </Link>
+                <a
+                  href="https://github.com/YOUR_USERNAME/YOUR_REPO"
+                  className="project-link"
+                >
+                  GitHub →
+                </a>
               </div>
-            ))}
+            </div>
+
+            {/* Project 02 - Connect Four */}
+            <div className="project-card reveal">
+              <div className="project-number">02</div>
+              <div className="project-tag">Frontend · React</div>
+              <h3 className="project-title">Connect Four vs AI</h3>
+              <p className="project-desc">
+                A Connect Four game with an AI opponent powered by the Minimax
+                algorithm with alpha-beta pruning. Features drop previews, win
+                detection, score tracking, and three difficulty levels.
+              </p>
+              <div className="project-links">
+                <Link to="/connectfour" className="project-link">
+                  Live Demo →
+                </Link>
+                <a
+                  href="https://github.com/YOUR_USERNAME/YOUR_REPO"
+                  className="project-link"
+                >
+                  GitHub →
+                </a>
+              </div>
+            </div>
+
+            {/* Project 03 - Placeholder */}
+            <div className="project-card reveal">
+              <div className="project-number">03</div>
+              <div className="project-tag">Backend · Placeholder</div>
+              <h3 className="project-title">Project Title Coming Soon</h3>
+              <p className="project-desc">
+                A brief description of what this project does, the problem it
+                solves, and what technologies were used to build it. Replace
+                with your real project details.
+              </p>
+              <div className="project-links">
+                <a href="#" className="project-link">
+                  Live Demo →
+                </a>
+                <a href="#" className="project-link">
+                  GitHub →
+                </a>
+              </div>
+            </div>
           </div>
         </div>
       </section>
-
       {/* CONTACT */}
       <section id="contact" className="contact-section port-section">
         <div className="contact-inner reveal">
