@@ -12,7 +12,6 @@ function App() {
         <Route path="/tictactoe" element={<TicTacToe />} />
         <Route path="/connectfour" element={<ConnectFour />} />
         <Route path="/tesla" element={<TeslaUI />} />
-        <Route path="/tesla/*" element={<TeslaUI />} />
         <Route path="/callback" element={<TeslaUI />} />
       </Routes>
     </BrowserRouter>

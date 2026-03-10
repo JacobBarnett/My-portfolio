@@ -35,6 +35,7 @@ async function loginWithSpotify() {
   const verifier = generateCodeVerifier();
   const challenge = await generateCodeChallenge(verifier);
   localStorage.setItem("spotify_verifier", verifier);
+  localStorage.setItem("spotify_post_login_panel", "music");
   const params = new URLSearchParams({
     client_id: CLIENT_ID,
     response_type: "code",
@@ -69,7 +70,6 @@ async function exchangeToken(code) {
       Date.now() + data.expires_in * 1000,
     );
     localStorage.removeItem("spotify_verifier");
-    window.history.replaceState({}, "", "/tesla");
     return data.access_token;
   }
   return null;
@@ -136,7 +136,7 @@ function useClock() {
   return time;
 }
 
-// ── MAP COMPONENT (Leaflet) ──
+// ── MAP COMPONENT ──
 function NavMap({ destination }) {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -144,7 +144,6 @@ function NavMap({ destination }) {
   const markerRef = useRef(null);
 
   useEffect(() => {
-    // Dynamically load Leaflet CSS + JS
     if (!document.getElementById("leaflet-css")) {
       const link = document.createElement("link");
       link.id = "leaflet-css";
@@ -152,9 +151,8 @@ function NavMap({ destination }) {
       link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
       document.head.appendChild(link);
     }
-
-    const loadLeaflet = () => {
-      return new Promise((resolve) => {
+    const loadLeaflet = () =>
+      new Promise((resolve) => {
         if (window.L) {
           resolve(window.L);
           return;
@@ -164,27 +162,18 @@ function NavMap({ destination }) {
         script.onload = () => resolve(window.L);
         document.body.appendChild(script);
       });
-    };
-
     loadLeaflet().then((L) => {
       if (mapInstanceRef.current || !mapRef.current) return;
-
       const map = L.map(mapRef.current, {
         center: [33.8868, -117.8878],
         zoom: 13,
         zoomControl: true,
         attributionControl: false,
       });
-
-      // Dark tile layer
       L.tileLayer(
         "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-        {
-          maxZoom: 19,
-        },
+        { maxZoom: 19 },
       ).addTo(map);
-
-      // Current location marker
       const icon = L.divIcon({
         className: "",
         html: '<div style="width:14px;height:14px;background:#e82127;border-radius:50%;border:2px solid #fff;box-shadow:0 0 10px rgba(232,33,39,0.8);"></div>',
@@ -192,10 +181,8 @@ function NavMap({ destination }) {
         iconAnchor: [7, 7],
       });
       L.marker([33.8868, -117.8878], { icon }).addTo(map);
-
       mapInstanceRef.current = map;
     });
-
     return () => {
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
@@ -204,12 +191,10 @@ function NavMap({ destination }) {
     };
   }, []);
 
-  // Handle destination search
   useEffect(() => {
     if (!destination || !mapInstanceRef.current) return;
     const L = window.L;
     if (!L) return;
-
     fetch(
       `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(destination)}&limit=1`,
     )
@@ -218,14 +203,10 @@ function NavMap({ destination }) {
         if (!results.length) return;
         const { lat, lon, display_name } = results[0];
         const destLatLng = [parseFloat(lat), parseFloat(lon)];
-
-        // Remove old marker/route
         if (markerRef.current)
           mapInstanceRef.current.removeLayer(markerRef.current);
         if (routeLayerRef.current)
           mapInstanceRef.current.removeLayer(routeLayerRef.current);
-
-        // Destination marker
         const destIcon = L.divIcon({
           className: "",
           html: '<div style="width:14px;height:14px;background:#3a7bd5;border-radius:50%;border:2px solid #fff;box-shadow:0 0 10px rgba(58,123,213,0.8);"></div>',
@@ -236,15 +217,12 @@ function NavMap({ destination }) {
           .addTo(mapInstanceRef.current)
           .bindPopup(display_name.split(",").slice(0, 2).join(","))
           .openPopup();
-
-        // Draw line between origin and destination
         routeLayerRef.current = L.polyline([[33.8868, -117.8878], destLatLng], {
           color: "#3a7bd5",
           weight: 3,
           opacity: 0.8,
           dashArray: "6,8",
         }).addTo(mapInstanceRef.current);
-
         mapInstanceRef.current.fitBounds([[33.8868, -117.8878], destLatLng], {
           padding: [40, 40],
         });
@@ -279,7 +257,7 @@ export default function TeslaUI() {
     const code = params.get("code");
     const error = params.get("error");
     if (error) {
-      window.history.replaceState({}, "", "/tesla");
+      window.history.replaceState({}, "", window.location.pathname);
       return;
     }
     if (code) {
@@ -289,12 +267,17 @@ export default function TeslaUI() {
           setAuthLoading(false);
           if (t) {
             setToken(t);
-            setActivePanel("music");
+            const panel =
+              localStorage.getItem("spotify_post_login_panel") || "music";
+            localStorage.removeItem("spotify_post_login_panel");
+            setActivePanel(panel);
           }
+          // Clean the URL regardless
+          window.history.replaceState({}, "", window.location.pathname);
         })
         .catch(() => {
           setAuthLoading(false);
-          window.history.replaceState({}, "", "/tesla");
+          window.history.replaceState({}, "", window.location.pathname);
         });
     }
   }, []);
@@ -326,24 +309,20 @@ export default function TeslaUI() {
     });
     setTimeout(fetchNowPlaying, 600);
   };
-
   const handleNext = async () => {
     await spotifyFetch("/me/player/next", { method: "POST" });
     setTimeout(fetchNowPlaying, 900);
   };
-
   const handlePrev = async () => {
     await spotifyFetch("/me/player/previous", { method: "POST" });
     setTimeout(fetchNowPlaying, 900);
   };
-
   const handleVolume = async (v) => {
     setVolume(v);
     await spotifyFetch(`/me/player/volume?volume_percent=${v}`, {
       method: "PUT",
     });
   };
-
   const logout = () => {
     localStorage.removeItem("spotify_token");
     localStorage.removeItem("spotify_refresh");
@@ -351,7 +330,6 @@ export default function TeslaUI() {
     setToken(null);
     setNowPlaying(null);
   };
-
   const handleNavGo = () => {
     if (!navInput.trim()) return;
     setDestination(navInput.trim());
@@ -487,7 +465,6 @@ export default function TeslaUI() {
               </text>
             </svg>
           </div>
-
           <div className="gear-selector">
             {["R", "N", "D", "P"].map((g) => (
               <button
@@ -499,7 +476,6 @@ export default function TeslaUI() {
               </button>
             ))}
           </div>
-
           <div className="climate-panel">
             <div className="climate-header">
               <span className="climate-icon">❄️</span>
@@ -777,7 +753,7 @@ export default function TeslaUI() {
                 },
                 {
                   label: "Spotify",
-                  value: token ? "Connected" : "Not Connected",
+                  value: token ? "Connected ✓" : "Not Connected",
                 },
                 { label: "Software Version", value: "2024.44.25" },
                 { label: "Vehicle Name", value: "Model S" },
