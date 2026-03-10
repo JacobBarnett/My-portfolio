@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useSearchParams } from "react-router-dom";
 import "./TeslaUI.css";
 
 // ── SPOTIFY CONFIG ──
@@ -49,7 +50,11 @@ async function loginWithSpotify() {
 
 async function exchangeToken(code) {
   const verifier = localStorage.getItem("spotify_verifier");
-  if (!verifier) return null;
+  console.log("verifier:", verifier);
+  if (!verifier) {
+    console.log("NO VERIFIER FOUND - this is the problem");
+    return null;
+  }
   const res = await fetch("https://accounts.spotify.com/api/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -62,6 +67,7 @@ async function exchangeToken(code) {
     }),
   });
   const data = await res.json();
+  console.log("spotify token response:", data);
   if (data.access_token) {
     localStorage.setItem("spotify_token", data.access_token);
     localStorage.setItem("spotify_refresh", data.refresh_token || "");
@@ -234,6 +240,7 @@ function NavMap({ destination }) {
 
 // ── MAIN COMPONENT ──
 export default function TeslaUI() {
+  console.log("URL on load:", window.location.href);
   const time = useClock();
   const [token, setToken] = useState(localStorage.getItem("spotify_token"));
   const [authLoading, setAuthLoading] = useState(false);
@@ -252,10 +259,12 @@ export default function TeslaUI() {
   const [navHistory, setNavHistory] = useState([]);
 
   // ── Handle Spotify OAuth callback ──
+  const [searchParams] = useSearchParams();
+
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const code = params.get("code");
-    const error = params.get("error");
+    const code = searchParams.get("code");
+    const error = searchParams.get("error");
+    console.log("useEffect fired, code:", code, "error:", error);
     if (error) {
       window.history.replaceState({}, "", window.location.pathname);
       return;
@@ -264,15 +273,12 @@ export default function TeslaUI() {
       setAuthLoading(true);
       exchangeToken(code)
         .then((t) => {
+          console.log("token result:", t);
           setAuthLoading(false);
           if (t) {
             setToken(t);
-            const panel =
-              localStorage.getItem("spotify_post_login_panel") || "music";
-            localStorage.removeItem("spotify_post_login_panel");
-            setActivePanel(panel);
+            setActivePanel("music");
           }
-          // Clean the URL regardless
           window.history.replaceState({}, "", window.location.pathname);
         })
         .catch(() => {
@@ -280,8 +286,7 @@ export default function TeslaUI() {
           window.history.replaceState({}, "", window.location.pathname);
         });
     }
-  }, []);
-
+  }, [searchParams]);
   // ── Poll now playing ──
   const fetchNowPlaying = useCallback(async () => {
     if (!token) return;
