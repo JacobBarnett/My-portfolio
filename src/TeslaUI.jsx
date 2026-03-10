@@ -35,8 +35,6 @@ async function generateCodeChallenge(verifier) {
 async function loginWithSpotify() {
   const verifier = generateCodeVerifier();
   const challenge = await generateCodeChallenge(verifier);
-  localStorage.setItem("spotify_verifier", verifier);
-  localStorage.setItem("spotify_post_login_panel", "music");
   const params = new URLSearchParams({
     client_id: CLIENT_ID,
     response_type: "code",
@@ -44,15 +42,14 @@ async function loginWithSpotify() {
     scope: SCOPES,
     code_challenge_method: "S256",
     code_challenge: challenge,
+    state: verifier, // store verifier in state param
   });
   window.location.href = `https://accounts.spotify.com/authorize?${params}`;
 }
 
-async function exchangeToken(code) {
-  const verifier = localStorage.getItem("spotify_verifier");
-  console.log("verifier:", verifier);
+async function exchangeToken(code, verifier) {
   if (!verifier) {
-    console.log("NO VERIFIER FOUND - this is the problem");
+    console.log("NO VERIFIER FOUND");
     return null;
   }
   const res = await fetch("https://accounts.spotify.com/api/token", {
@@ -67,7 +64,7 @@ async function exchangeToken(code) {
     }),
   });
   const data = await res.json();
-  console.log("spotify token response:", data);
+  console.log("spotify response:", data);
   if (data.access_token) {
     localStorage.setItem("spotify_token", data.access_token);
     localStorage.setItem("spotify_refresh", data.refresh_token || "");
@@ -75,7 +72,6 @@ async function exchangeToken(code) {
       "spotify_expires",
       Date.now() + data.expires_in * 1000,
     );
-    localStorage.removeItem("spotify_verifier");
     return data.access_token;
   }
   return null;
@@ -263,15 +259,23 @@ export default function TeslaUI() {
 
   useEffect(() => {
     const code = searchParams.get("code");
+    const verifier = searchParams.get("state");
     const error = searchParams.get("error");
-    console.log("useEffect fired, code:", code, "error:", error);
+    console.log(
+      "useEffect fired, code:",
+      code,
+      "verifier:",
+      verifier,
+      "error:",
+      error,
+    );
     if (error) {
       window.history.replaceState({}, "", window.location.pathname);
       return;
     }
-    if (code) {
+    if (code && verifier) {
       setAuthLoading(true);
-      exchangeToken(code)
+      exchangeToken(code, verifier)
         .then((t) => {
           console.log("token result:", t);
           setAuthLoading(false);
