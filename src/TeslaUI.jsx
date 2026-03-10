@@ -64,7 +64,6 @@ async function exchangeToken(code, verifier) {
     }),
   });
   const data = await res.json();
-  console.log("spotify response:", data);
   if (data.access_token) {
     localStorage.setItem("spotify_token", data.access_token);
     localStorage.setItem("spotify_refresh", data.refresh_token || "");
@@ -236,7 +235,6 @@ function NavMap({ destination }) {
 
 // ── MAIN COMPONENT ──
 export default function TeslaUI() {
-  console.log("URL on load:", window.location.href);
   const time = useClock();
   const [token, setToken] = useState(localStorage.getItem("spotify_token"));
   const [authLoading, setAuthLoading] = useState(false);
@@ -261,14 +259,6 @@ export default function TeslaUI() {
     const code = searchParams.get("code");
     const verifier = searchParams.get("state");
     const error = searchParams.get("error");
-    console.log(
-      "useEffect fired, code:",
-      code,
-      "verifier:",
-      verifier,
-      "error:",
-      error,
-    );
     if (error) {
       window.history.replaceState({}, "", window.location.pathname);
       return;
@@ -277,7 +267,6 @@ export default function TeslaUI() {
       setAuthLoading(true);
       exchangeToken(code, verifier)
         .then((t) => {
-          console.log("token result:", t);
           setAuthLoading(false);
           if (t) {
             setToken(t);
