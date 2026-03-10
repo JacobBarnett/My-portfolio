@@ -231,7 +231,9 @@ export default function SpotifyPanel({ onDisconnect }) {
                 )}
                 <div className="sp-pl-info">
                   <div className="sp-pl-name">{pl.name}</div>
-                  <div className="sp-pl-meta">{pl.tracks.total} songs</div>
+                  <div className="sp-pl-meta">
+                    {pl.tracks?.total ?? 0} songs
+                  </div>{" "}
                 </div>
               </button>
             ))}
@@ -305,7 +307,7 @@ export default function SpotifyPanel({ onDisconnect }) {
                   {activePlaylist.name}
                 </div>
                 <div className="sp-playlist-hero-meta">
-                  {activePlaylist.tracks.total} songs
+                  {activePlaylist.tracks?.total ?? 0} songs
                 </div>
                 <button
                   className="sp-play-all"
