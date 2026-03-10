@@ -243,7 +243,6 @@ export default function TeslaUI() {
   const [authLoading, setAuthLoading] = useState(false);
   const [nowPlaying, setNowPlaying] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [volume, setVolume] = useState(50);
   const [temp, setTemp] = useState(72);
   const [acOn, setAcOn] = useState(true);
   const [gear, setGear] = useState("P");
@@ -293,7 +292,6 @@ export default function TeslaUI() {
     if (data && data.item) {
       setNowPlaying(data.item);
       setIsPlaying(data.is_playing);
-      setVolume(data.device?.volume_percent ?? 50);
     } else {
       setNowPlaying(null);
       setIsPlaying(false);
@@ -321,12 +319,7 @@ export default function TeslaUI() {
     await spotifyFetch("/me/player/previous", { method: "POST" });
     setTimeout(fetchNowPlaying, 900);
   };
-  const handleVolume = async (v) => {
-    setVolume(v);
-    await spotifyFetch(`/me/player/volume?volume_percent=${v}`, {
-      method: "PUT",
-    });
-  };
+
   const logout = () => {
     localStorage.removeItem("spotify_token");
     localStorage.removeItem("spotify_refresh");
