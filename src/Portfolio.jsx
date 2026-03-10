@@ -328,7 +328,7 @@ export default function Portfolio() {
               </svg>
               LinkedIn
             </a>
-            <a href="#" className="social-link">
+            <a href="https://github.com/JacobBarnett">
               <svg
                 width="14"
                 height="14"

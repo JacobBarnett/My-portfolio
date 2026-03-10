@@ -1,14 +1,13 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import "./TeslaUI.css";
 
 // ── SPOTIFY CONFIG ──
 const CLIENT_ID = "235a98443cd04cc88e4cbe64c9badd7f";
-const REDIRECT_URI = "https://jacobbarnett.dev/tesla";
+const REDIRECT_URI = "https://jacobbarnett.dev/callback";
 const SCOPES = [
   "user-read-playback-state",
   "user-modify-playback-state",
   "user-read-currently-playing",
-  "streaming",
   "user-read-email",
   "user-read-private",
 ].join(" ");
@@ -35,7 +34,7 @@ async function generateCodeChallenge(verifier) {
 async function loginWithSpotify() {
   const verifier = generateCodeVerifier();
   const challenge = await generateCodeChallenge(verifier);
-  localStorage.setItem("spotify_verifier", verifier);
+  sessionStorage.setItem("spotify_verifier", verifier);
   const params = new URLSearchParams({
     client_id: CLIENT_ID,
     response_type: "code",
@@ -48,7 +47,8 @@ async function loginWithSpotify() {
 }
 
 async function exchangeToken(code) {
-  const verifier = localStorage.getItem("spotify_verifier");
+  const verifier = sessionStorage.getItem("spotify_verifier");
+  if (!verifier) return null;
   const res = await fetch("https://accounts.spotify.com/api/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -63,18 +63,19 @@ async function exchangeToken(code) {
   const data = await res.json();
   if (data.access_token) {
     localStorage.setItem("spotify_token", data.access_token);
-    localStorage.setItem("spotify_refresh", data.refresh_token);
+    localStorage.setItem("spotify_refresh", data.refresh_token || "");
     localStorage.setItem(
       "spotify_expires",
       Date.now() + data.expires_in * 1000,
     );
+    sessionStorage.removeItem("spotify_verifier");
     window.history.replaceState({}, "", "/tesla");
     return data.access_token;
   }
   return null;
 }
 
-async function refreshToken() {
+async function doRefreshToken() {
   const refresh = localStorage.getItem("spotify_refresh");
   if (!refresh) return null;
   const res = await fetch("https://accounts.spotify.com/api/token", {
@@ -102,7 +103,7 @@ async function getValidToken() {
   const expires = parseInt(localStorage.getItem("spotify_expires") || "0");
   if (Date.now() < expires - 60000)
     return localStorage.getItem("spotify_token");
-  return await refreshToken();
+  return await doRefreshToken();
 }
 
 async function spotifyFetch(endpoint, options = {}) {
@@ -118,7 +119,11 @@ async function spotifyFetch(endpoint, options = {}) {
   });
   if (res.status === 204 || res.status === 202) return {};
   if (!res.ok) return null;
-  return res.json();
+  try {
+    return await res.json();
+  } catch {
+    return {};
+  }
 }
 
 // ── CLOCK ──
@@ -131,10 +136,129 @@ function useClock() {
   return time;
 }
 
-// ── COMPONENT ──
+// ── MAP COMPONENT (Leaflet) ──
+function NavMap({ destination }) {
+  const mapRef = useRef(null);
+  const mapInstanceRef = useRef(null);
+  const routeLayerRef = useRef(null);
+  const markerRef = useRef(null);
+
+  useEffect(() => {
+    // Dynamically load Leaflet CSS + JS
+    if (!document.getElementById("leaflet-css")) {
+      const link = document.createElement("link");
+      link.id = "leaflet-css";
+      link.rel = "stylesheet";
+      link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+      document.head.appendChild(link);
+    }
+
+    const loadLeaflet = () => {
+      return new Promise((resolve) => {
+        if (window.L) {
+          resolve(window.L);
+          return;
+        }
+        const script = document.createElement("script");
+        script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+        script.onload = () => resolve(window.L);
+        document.body.appendChild(script);
+      });
+    };
+
+    loadLeaflet().then((L) => {
+      if (mapInstanceRef.current || !mapRef.current) return;
+
+      const map = L.map(mapRef.current, {
+        center: [33.8868, -117.8878],
+        zoom: 13,
+        zoomControl: true,
+        attributionControl: false,
+      });
+
+      // Dark tile layer
+      L.tileLayer(
+        "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+        {
+          maxZoom: 19,
+        },
+      ).addTo(map);
+
+      // Current location marker
+      const icon = L.divIcon({
+        className: "",
+        html: '<div style="width:14px;height:14px;background:#e82127;border-radius:50%;border:2px solid #fff;box-shadow:0 0 10px rgba(232,33,39,0.8);"></div>',
+        iconSize: [14, 14],
+        iconAnchor: [7, 7],
+      });
+      L.marker([33.8868, -117.8878], { icon }).addTo(map);
+
+      mapInstanceRef.current = map;
+    });
+
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+      }
+    };
+  }, []);
+
+  // Handle destination search
+  useEffect(() => {
+    if (!destination || !mapInstanceRef.current) return;
+    const L = window.L;
+    if (!L) return;
+
+    fetch(
+      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(destination)}&limit=1`,
+    )
+      .then((r) => r.json())
+      .then((results) => {
+        if (!results.length) return;
+        const { lat, lon, display_name } = results[0];
+        const destLatLng = [parseFloat(lat), parseFloat(lon)];
+
+        // Remove old marker/route
+        if (markerRef.current)
+          mapInstanceRef.current.removeLayer(markerRef.current);
+        if (routeLayerRef.current)
+          mapInstanceRef.current.removeLayer(routeLayerRef.current);
+
+        // Destination marker
+        const destIcon = L.divIcon({
+          className: "",
+          html: '<div style="width:14px;height:14px;background:#3a7bd5;border-radius:50%;border:2px solid #fff;box-shadow:0 0 10px rgba(58,123,213,0.8);"></div>',
+          iconSize: [14, 14],
+          iconAnchor: [7, 7],
+        });
+        markerRef.current = L.marker(destLatLng, { icon: destIcon })
+          .addTo(mapInstanceRef.current)
+          .bindPopup(display_name.split(",").slice(0, 2).join(","))
+          .openPopup();
+
+        // Draw line between origin and destination
+        routeLayerRef.current = L.polyline([[33.8868, -117.8878], destLatLng], {
+          color: "#3a7bd5",
+          weight: 3,
+          opacity: 0.8,
+          dashArray: "6,8",
+        }).addTo(mapInstanceRef.current);
+
+        mapInstanceRef.current.fitBounds([[33.8868, -117.8878], destLatLng], {
+          padding: [40, 40],
+        });
+      });
+  }, [destination]);
+
+  return <div ref={mapRef} className="leaflet-map" />;
+}
+
+// ── MAIN COMPONENT ──
 export default function TeslaUI() {
   const time = useClock();
   const [token, setToken] = useState(localStorage.getItem("spotify_token"));
+  const [authLoading, setAuthLoading] = useState(false);
   const [nowPlaying, setNowPlaying] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [volume, setVolume] = useState(50);
@@ -143,22 +267,39 @@ export default function TeslaUI() {
   const [gear, setGear] = useState("P");
   const [brightness, setBrightness] = useState(80);
   const [activePanel, setActivePanel] = useState("home");
-  const [speed] = useState(0);
   const [batteryPct] = useState(87);
   const [range] = useState(247);
+  const [navInput, setNavInput] = useState("");
+  const [destination, setDestination] = useState("");
+  const [navHistory, setNavHistory] = useState([]);
 
-  // Handle OAuth callback
+  // ── Handle Spotify OAuth callback ──
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const code = params.get("code");
+    const error = params.get("error");
+    if (error) {
+      window.history.replaceState({}, "", "/tesla");
+      return;
+    }
     if (code) {
-      exchangeToken(code).then((t) => {
-        if (t) setToken(t);
-      });
+      setAuthLoading(true);
+      exchangeToken(code)
+        .then((t) => {
+          setAuthLoading(false);
+          if (t) {
+            setToken(t);
+            setActivePanel("music");
+          }
+        })
+        .catch(() => {
+          setAuthLoading(false);
+          window.history.replaceState({}, "", "/tesla");
+        });
     }
   }, []);
 
-  // Poll now playing
+  // ── Poll now playing ──
   const fetchNowPlaying = useCallback(async () => {
     if (!token) return;
     const data = await spotifyFetch("/me/player/currently-playing");
@@ -168,6 +309,7 @@ export default function TeslaUI() {
       setVolume(data.device?.volume_percent ?? 50);
     } else {
       setNowPlaying(null);
+      setIsPlaying(false);
     }
   }, [token]);
 
@@ -182,17 +324,17 @@ export default function TeslaUI() {
     await spotifyFetch(isPlaying ? "/me/player/pause" : "/me/player/play", {
       method: "PUT",
     });
-    setTimeout(fetchNowPlaying, 500);
+    setTimeout(fetchNowPlaying, 600);
   };
 
   const handleNext = async () => {
     await spotifyFetch("/me/player/next", { method: "POST" });
-    setTimeout(fetchNowPlaying, 800);
+    setTimeout(fetchNowPlaying, 900);
   };
 
   const handlePrev = async () => {
     await spotifyFetch("/me/player/previous", { method: "POST" });
-    setTimeout(fetchNowPlaying, 800);
+    setTimeout(fetchNowPlaying, 900);
   };
 
   const handleVolume = async (v) => {
@@ -210,6 +352,14 @@ export default function TeslaUI() {
     setNowPlaying(null);
   };
 
+  const handleNavGo = () => {
+    if (!navInput.trim()) return;
+    setDestination(navInput.trim());
+    setNavHistory((h) =>
+      [navInput.trim(), ...h.filter((x) => x !== navInput.trim())].slice(0, 5),
+    );
+  };
+
   const formatTime = (d) =>
     d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   const formatDate = (d) =>
@@ -219,9 +369,14 @@ export default function TeslaUI() {
       day: "numeric",
     });
 
-  const progressPct = nowPlaying
-    ? Math.round(nowPlaying.duration_ms > 0 ? 0 : 0)
-    : 0;
+  if (authLoading) {
+    return (
+      <div className="tesla-wrapper tesla-loading">
+        <div className="loading-spinner" />
+        <div className="loading-text">Connecting to Spotify...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="tesla-wrapper">
@@ -245,18 +400,17 @@ export default function TeslaUI() {
         </div>
         <div className="tsb-right">
           <span className="tsb-speed">
-            {speed} <small>mph</small>
+            0 <small>mph</small>
           </span>
         </div>
       </div>
 
       {/* MAIN LAYOUT */}
       <div className="tesla-main">
-        {/* LEFT PANEL — Car Viz */}
+        {/* LEFT PANEL */}
         <div className="tesla-left">
           <div className="car-viz">
             <svg viewBox="0 0 300 160" className="car-svg">
-              {/* Car body */}
               <defs>
                 <linearGradient id="bodyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
                   <stop offset="0%" stopColor="#e8e8e8" />
@@ -272,15 +426,7 @@ export default function TeslaUI() {
                   <stop offset="0%" stopColor="#1a3a5c" stopOpacity="0.9" />
                   <stop offset="100%" stopColor="#0a1a2c" stopOpacity="0.95" />
                 </linearGradient>
-                <filter id="glow">
-                  <feGaussianBlur stdDeviation="3" result="coloredBlur" />
-                  <feMerge>
-                    <feMergeNode in="coloredBlur" />
-                    <feMergeNode in="SourceGraphic" />
-                  </feMerge>
-                </filter>
               </defs>
-              {/* Shadow */}
               <ellipse
                 cx="150"
                 cy="148"
@@ -288,17 +434,14 @@ export default function TeslaUI() {
                 ry="8"
                 fill="rgba(0,0,0,0.3)"
               />
-              {/* Body */}
               <path
                 d="M 40 110 Q 40 90 60 85 L 90 65 Q 120 45 150 43 Q 180 43 210 55 L 245 75 Q 265 82 268 95 L 270 110 Q 270 120 260 122 L 40 122 Q 30 120 40 110 Z"
                 fill="url(#bodyGrad)"
               />
-              {/* Roof */}
               <path
                 d="M 95 68 Q 130 44 168 43 Q 200 43 220 57 L 245 75 Q 220 70 195 68 L 105 68 Z"
                 fill="#c8c8c8"
               />
-              {/* Windows */}
               <path
                 d="M 100 68 L 148 48 L 175 48 L 195 68 Z"
                 fill="url(#windowGrad)"
@@ -309,7 +452,6 @@ export default function TeslaUI() {
                 fill="url(#windowGrad)"
                 opacity="0.9"
               />
-              {/* Door lines */}
               <line
                 x1="155"
                 y1="68"
@@ -319,7 +461,6 @@ export default function TeslaUI() {
                 strokeWidth="1"
                 opacity="0.5"
               />
-              {/* Wheels */}
               <circle cx="90" cy="122" r="20" fill="#1a1a1a" />
               <circle cx="90" cy="122" r="14" fill="#2a2a2a" />
               <circle cx="90" cy="122" r="7" fill="#3a3a3a" />
@@ -328,14 +469,11 @@ export default function TeslaUI() {
               <circle cx="210" cy="122" r="14" fill="#2a2a2a" />
               <circle cx="210" cy="122" r="7" fill="#3a3a3a" />
               <circle cx="210" cy="122" r="3" fill="#888" />
-              {/* Headlights */}
               <path
                 d="M 265 88 L 272 90 L 272 96 L 265 95 Z"
                 fill="#fffbe6"
-                filter="url(#glow)"
                 opacity="0.9"
               />
-              {/* Tesla T logo */}
               <text
                 x="150"
                 y="108"
@@ -350,7 +488,6 @@ export default function TeslaUI() {
             </svg>
           </div>
 
-          {/* GEAR SELECTOR */}
           <div className="gear-selector">
             {["R", "N", "D", "P"].map((g) => (
               <button
@@ -363,7 +500,6 @@ export default function TeslaUI() {
             ))}
           </div>
 
-          {/* CLIMATE */}
           <div className="climate-panel">
             <div className="climate-header">
               <span className="climate-icon">❄️</span>
@@ -395,7 +531,6 @@ export default function TeslaUI() {
 
         {/* CENTER PANEL */}
         <div className="tesla-center">
-          {/* NAV TABS */}
           <div className="center-tabs">
             {[
               { id: "home", icon: "⊞", label: "Home" },
@@ -414,11 +549,11 @@ export default function TeslaUI() {
             ))}
           </div>
 
-          {/* HOME PANEL */}
+          {/* HOME */}
           {activePanel === "home" && (
             <div className="panel home-panel">
               <div className="home-grid">
-                <div className="home-card battery-card">
+                <div className="home-card">
                   <div className="hc-label">Battery</div>
                   <div className="hc-value">
                     {batteryPct}
@@ -432,12 +567,12 @@ export default function TeslaUI() {
                   </div>
                   <div className="hc-sub">{range} mi remaining</div>
                 </div>
-                <div className="home-card lock-card" onClick={() => {}}>
+                <div className="home-card">
                   <div className="hc-label">Doors</div>
                   <div className="lock-icon">🔒</div>
                   <div className="hc-sub">Locked</div>
                 </div>
-                <div className="home-card temp-card">
+                <div className="home-card">
                   <div className="hc-label">Interior</div>
                   <div className="hc-value">
                     {temp}
@@ -447,7 +582,7 @@ export default function TeslaUI() {
                     {acOn ? "Climate On" : "Climate Off"}
                   </div>
                 </div>
-                <div className="home-card bright-card">
+                <div className="home-card">
                   <div className="hc-label">Brightness</div>
                   <input
                     type="range"
@@ -460,8 +595,6 @@ export default function TeslaUI() {
                   <div className="hc-sub">{brightness}%</div>
                 </div>
               </div>
-
-              {/* Mini now playing on home */}
               {token && nowPlaying && (
                 <div className="mini-player">
                   <img
@@ -491,7 +624,7 @@ export default function TeslaUI() {
             </div>
           )}
 
-          {/* MUSIC PANEL */}
+          {/* MUSIC */}
           {activePanel === "music" && (
             <div className="panel music-panel">
               {!token ? (
@@ -499,8 +632,8 @@ export default function TeslaUI() {
                   <div className="spotify-logo">
                     <svg
                       viewBox="0 0 24 24"
-                      width="48"
-                      height="48"
+                      width="56"
+                      height="56"
                       fill="#1DB954"
                     >
                       <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" />
@@ -575,34 +708,64 @@ export default function TeslaUI() {
                     </div>
                   )}
                   <button className="spotify-disconnect" onClick={logout}>
-                    Disconnect
+                    Disconnect Spotify
                   </button>
                 </div>
               )}
             </div>
           )}
 
-          {/* NAV PANEL */}
+          {/* NAVIGATION */}
           {activePanel === "nav" && (
             <div className="panel nav-panel">
-              <div className="map-placeholder">
-                <div className="map-grid" />
-                <div className="map-center-dot" />
-                <div className="map-label">Navigation</div>
-                <div className="map-sub">GPS Signal Active</div>
-                <div className="map-coords">33.8868° N, 117.8878° W</div>
-              </div>
-              <div className="nav-dest">
+              <div className="nav-search-row">
                 <input
                   className="nav-input"
                   placeholder="Search destination..."
+                  value={navInput}
+                  onChange={(e) => setNavInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && handleNavGo()}
                 />
-                <button className="nav-go">Go</button>
+                <button className="nav-go" onClick={handleNavGo}>
+                  Go
+                </button>
               </div>
+              {navHistory.length > 0 && !destination && (
+                <div className="nav-history">
+                  {navHistory.map((h) => (
+                    <button
+                      key={h}
+                      className="nav-history-item"
+                      onClick={() => {
+                        setNavInput(h);
+                        setDestination(h);
+                      }}
+                    >
+                      <span>📍</span> {h}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {destination && (
+                <div className="nav-active-dest">
+                  <span className="nav-dest-label">Navigating to:</span>
+                  <span className="nav-dest-name">{destination}</span>
+                  <button
+                    className="nav-clear"
+                    onClick={() => {
+                      setDestination("");
+                      setNavInput("");
+                    }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
+              <NavMap destination={destination} />
             </div>
           )}
 
-          {/* SETTINGS PANEL */}
+          {/* SETTINGS */}
           {activePanel === "settings" && (
             <div className="panel settings-panel">
               {[
@@ -611,6 +774,10 @@ export default function TeslaUI() {
                 {
                   label: "Climate Control",
                   value: acOn ? "Enabled" : "Disabled",
+                },
+                {
+                  label: "Spotify",
+                  value: token ? "Connected" : "Not Connected",
                 },
                 { label: "Software Version", value: "2024.44.25" },
                 { label: "Vehicle Name", value: "Model S" },
@@ -637,7 +804,6 @@ export default function TeslaUI() {
               })}
             </div>
           </div>
-
           <div className="right-stats">
             <div className="rstat">
               <div className="rstat-icon">⚡</div>
@@ -655,14 +821,12 @@ export default function TeslaUI() {
               <div className="rstat-label">Cabin</div>
             </div>
           </div>
-
           <div className="right-gear">
             <div className="gear-display">
               <span className="gear-label">Gear</span>
               <span className="gear-value">{gear}</span>
             </div>
           </div>
-
           <a href="/" className="tesla-back">
             ← Portfolio
           </a>
