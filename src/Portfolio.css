@@ -517,6 +517,109 @@ body {
   border-color: var(--accent);
 }
 
+/* ── FEATURED PROJECT CARD ── */
+.project-card--featured {
+  border-color: var(--accent);
+  background: linear-gradient(
+    135deg,
+    rgba(17, 34, 64, 0.9),
+    rgba(29, 52, 96, 0.5)
+  );
+}
+
+.project-featured-badge {
+  display: inline-block;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--navy);
+  background: var(--accent);
+  padding: 0.2rem 0.65rem;
+  border-radius: 2px;
+  margin-bottom: 0.6rem;
+}
+
+.project-link--primary {
+  color: var(--accent) !important;
+  border-bottom-color: var(--accent) !important;
+  font-weight: 600;
+}
+
+/* ── GAMES SECTION ── */
+.games-section {
+  background: var(--navy);
+  border-top: 1px solid var(--border);
+}
+
+.games-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1rem;
+}
+
+.game-card {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1.5rem;
+  text-decoration: none;
+  color: var(--text);
+  transition:
+    transform 0.25s,
+    border-color 0.25s,
+    background 0.25s;
+}
+.game-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--accent);
+  background: rgba(200, 169, 110, 0.06);
+}
+
+.game-icon {
+  font-size: 1.6rem;
+  min-width: 48px;
+  text-align: center;
+  letter-spacing: -4px;
+}
+
+.game-info {
+  flex: 1;
+}
+.game-title {
+  font-family: "DM Serif Display", serif;
+  font-size: 1.1rem;
+  margin-bottom: 0.3rem;
+}
+.game-desc {
+  font-size: 0.8rem;
+  color: var(--muted);
+  line-height: 1.6;
+  margin-bottom: 0.5rem;
+}
+.game-tag {
+  font-size: 0.65rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.game-arrow {
+  font-size: 1.2rem;
+  color: var(--muted);
+  transition:
+    color 0.2s,
+    transform 0.2s;
+}
+.game-card:hover .game-arrow {
+  color: var(--accent);
+  transform: translateX(4px);
+}
+
 /* ── FOOTER ── */
 .port-footer {
   text-align: center;

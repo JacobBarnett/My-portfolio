@@ -30,6 +30,7 @@ export default function Portfolio() {
           <a href="#about">About</a>
           <a href="#skills">Skills</a>
           <a href="#projects">Projects</a>
+          <a href="#games">Games</a>
           <a href="#contact">Contact</a>
         </div>
       </nav>
@@ -175,27 +176,34 @@ export default function Portfolio() {
         </div>
       </section>
 
-      {/* PROJECTS */}
+      {/* FEATURED PROJECTS */}
       <section id="projects" className="projects-section port-section">
         <div className="projects-inner">
           <div className="reveal">
-            <span className="section-label">Work</span>
+            <span className="section-label">Featured Work</span>
             <h2 className="section-title">Projects</h2>
           </div>
           <div className="projects-grid">
-            {/* Project 01 - Tic Tac Toe */}
-            <div className="project-card reveal">
+            {/* Tesla UI */}
+            <div className="project-card project-card--featured reveal">
               <div className="project-number">01</div>
-              <div className="project-tag">Full Stack · React</div>
-              <h3 className="project-title">Tic Tac Toe vs AI</h3>
+              <div className="project-featured-badge">Featured</div>
+              <div className="project-tag">React · Spotify API · Dashboard</div>
+              <h3 className="project-title">Tesla Car UI</h3>
               <p className="project-desc">
-                A Tic Tac Toe game featuring an unbeatable AI opponent built
-                with the Minimax algorithm and alpha-beta pruning. Three
-                difficulty levels — Easy, Medium, and Hard.
+                A fully interactive Tesla-inspired car dashboard with real
+                Spotify integration. Control music playback, climate,
+                navigation, and vehicle settings — all from a sleek automotive
+                UI built in React.
               </p>
               <div className="project-links">
-                <a href="/tictactoe" className="project-link">
-                  Live Demo →
+                <a
+                  href="/tesla"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="project-link project-link--primary"
+                >
+                  Launch App →
                 </a>
                 <a
                   href="https://github.com/JacobBarnett"
@@ -208,20 +216,16 @@ export default function Portfolio() {
               </div>
             </div>
 
-            {/* Project 02 - Connect Four */}
+            {/* Placeholder 02 */}
             <div className="project-card reveal">
               <div className="project-number">02</div>
-              <div className="project-tag">Frontend · React</div>
-              <h3 className="project-title">Connect Four vs AI</h3>
+              <div className="project-tag">Coming Soon</div>
+              <h3 className="project-title">Next Project</h3>
               <p className="project-desc">
-                A Connect Four game with an AI opponent powered by the Minimax
-                algorithm with alpha-beta pruning. Features drop previews, win
-                detection, score tracking, and three difficulty levels.
+                Currently in development. Check back soon or visit my GitHub to
+                see what I'm working on.
               </p>
               <div className="project-links">
-                <a href="/connectfour" className="project-link">
-                  Live Demo →
-                </a>
                 <a
                   href="https://github.com/JacobBarnett"
                   target="_blank"
@@ -232,27 +236,43 @@ export default function Portfolio() {
                 </a>
               </div>
             </div>
+          </div>
+        </div>
+      </section>
 
-            {/* Project 03 - Placeholder */}
-            <div className="project-card reveal">
-              <div className="project-number">03</div>
-              <div className="project-tag">Backend · Coming Soon</div>
-              <h3 className="project-title">Project Coming Soon</h3>
-              <p className="project-desc">
-                A new project is currently in development. Check back soon or
-                visit my GitHub to see what I'm working on.
-              </p>
-              <div className="project-links">
-                <a
-                  href="https://github.com/JacobBarnett"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="project-link"
-                >
-                  GitHub →
-                </a>
+      {/* MINI GAMES */}
+      <section id="games" className="games-section port-section">
+        <div className="projects-inner">
+          <div className="reveal">
+            <span className="section-label">Just for Fun</span>
+            <h2 className="section-title">Mini Games</h2>
+          </div>
+          <div className="games-grid">
+            <a href="/tictactoe" className="game-card reveal">
+              <div className="game-icon">✕ ○</div>
+              <div className="game-info">
+                <div className="game-title">Tic Tac Toe</div>
+                <div className="game-desc">
+                  Play against an unbeatable AI — Minimax algorithm with 3
+                  difficulty levels.
+                </div>
+                <div className="game-tag">React · Minimax AI</div>
               </div>
-            </div>
+              <div className="game-arrow">→</div>
+            </a>
+
+            <a href="/connectfour" className="game-card reveal">
+              <div className="game-icon">🔴 🟡</div>
+              <div className="game-info">
+                <div className="game-title">Connect Four</div>
+                <div className="game-desc">
+                  Drop pieces against a strategic AI with alpha-beta pruning and
+                  5-move lookahead.
+                </div>
+                <div className="game-tag">React · Minimax AI</div>
+              </div>
+              <div className="game-arrow">→</div>
+            </a>
           </div>
         </div>
       </section>
@@ -308,7 +328,7 @@ export default function Portfolio() {
               </svg>
               LinkedIn
             </a>
-            <a href="https://github.com/JacobBarnett" className="social-link">
+            <a href="#" className="social-link">
               <svg
                 width="14"
                 height="14"
