@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { useSearchParams } from "react-router-dom";
 import "./TeslaUI.css";
+import SpotifyPanel from "./SpotifyPanel";
 
 // ── SPOTIFY CONFIG ──
 const CLIENT_ID = "235a98443cd04cc88e4cbe64c9badd7f";
@@ -11,6 +11,9 @@ const SCOPES = [
   "user-read-currently-playing",
   "user-read-email",
   "user-read-private",
+  "user-library-read",
+  "playlist-read-private",
+  "playlist-read-collaborative",
 ].join(" ");
 
 // ── PKCE HELPERS ──
@@ -35,6 +38,8 @@ async function generateCodeChallenge(verifier) {
 async function loginWithSpotify() {
   const verifier = generateCodeVerifier();
   const challenge = await generateCodeChallenge(verifier);
+  localStorage.setItem("spotify_verifier", verifier);
+  localStorage.setItem("spotify_post_login_panel", "music");
   const params = new URLSearchParams({
     client_id: CLIENT_ID,
     response_type: "code",
@@ -42,16 +47,13 @@ async function loginWithSpotify() {
     scope: SCOPES,
     code_challenge_method: "S256",
     code_challenge: challenge,
-    state: verifier, // store verifier in state param
   });
   window.location.href = `https://accounts.spotify.com/authorize?${params}`;
 }
 
-async function exchangeToken(code, verifier) {
-  if (!verifier) {
-    console.log("NO VERIFIER FOUND");
-    return null;
-  }
+async function exchangeToken(code) {
+  const verifier = localStorage.getItem("spotify_verifier");
+  if (!verifier) return null;
   const res = await fetch("https://accounts.spotify.com/api/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -71,6 +73,7 @@ async function exchangeToken(code, verifier) {
       "spotify_expires",
       Date.now() + data.expires_in * 1000,
     );
+    localStorage.removeItem("spotify_verifier");
     return data.access_token;
   }
   return null;
@@ -253,25 +256,27 @@ export default function TeslaUI() {
   const [navHistory, setNavHistory] = useState([]);
 
   // ── Handle Spotify OAuth callback ──
-  const [searchParams] = useSearchParams();
-
   useEffect(() => {
-    const code = searchParams.get("code");
-    const verifier = searchParams.get("state");
-    const error = searchParams.get("error");
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get("code");
+    const error = params.get("error");
     if (error) {
       window.history.replaceState({}, "", window.location.pathname);
       return;
     }
-    if (code && verifier) {
+    if (code) {
       setAuthLoading(true);
-      exchangeToken(code, verifier)
+      exchangeToken(code)
         .then((t) => {
           setAuthLoading(false);
           if (t) {
             setToken(t);
-            setActivePanel("music");
+            const panel =
+              localStorage.getItem("spotify_post_login_panel") || "music";
+            localStorage.removeItem("spotify_post_login_panel");
+            setActivePanel(panel);
           }
+          // Clean the URL regardless
           window.history.replaceState({}, "", window.location.pathname);
         })
         .catch(() => {
@@ -279,7 +284,8 @@ export default function TeslaUI() {
           window.history.replaceState({}, "", window.location.pathname);
         });
     }
-  }, [searchParams]);
+  }, []);
+
   // ── Poll now playing ──
   const fetchNowPlaying = useCallback(async () => {
     if (!token) return;
@@ -622,69 +628,7 @@ export default function TeslaUI() {
                   </button>
                 </div>
               ) : (
-                <div className="now-playing-full">
-                  {nowPlaying ? (
-                    <>
-                      <div className="np-art-wrap">
-                        <img
-                          src={nowPlaying.album?.images?.[0]?.url}
-                          alt="album art"
-                          className="np-art"
-                        />
-                        <div
-                          className="np-art-glow"
-                          style={{
-                            backgroundImage: `url(${nowPlaying.album?.images?.[0]?.url})`,
-                          }}
-                        />
-                      </div>
-                      <div className="np-info">
-                        <div className="np-title">{nowPlaying.name}</div>
-                        <div className="np-artist">
-                          {nowPlaying.artists?.map((a) => a.name).join(", ")}
-                        </div>
-                        <div className="np-album">{nowPlaying.album?.name}</div>
-                      </div>
-                      <div className="np-controls">
-                        <button className="np-btn" onClick={handlePrev}>
-                          ⏮
-                        </button>
-                        <button
-                          className="np-btn np-play"
-                          onClick={handlePlayPause}
-                        >
-                          {isPlaying ? "⏸" : "▶"}
-                        </button>
-                        <button className="np-btn" onClick={handleNext}>
-                          ⏭
-                        </button>
-                      </div>
-                      <div className="volume-row">
-                        <span className="vol-icon">🔈</span>
-                        <input
-                          type="range"
-                          min="0"
-                          max="100"
-                          value={volume}
-                          onChange={(e) => handleVolume(Number(e.target.value))}
-                          className="vol-slider"
-                        />
-                        <span className="vol-icon">🔊</span>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="np-idle">
-                      <div className="np-idle-icon">♫</div>
-                      <div className="np-idle-text">Nothing playing</div>
-                      <div className="np-idle-sub">
-                        Open Spotify on any device to start playing
-                      </div>
-                    </div>
-                  )}
-                  <button className="spotify-disconnect" onClick={logout}>
-                    Disconnect Spotify
-                  </button>
-                </div>
+                <SpotifyPanel onDisconnect={logout} />
               )}
             </div>
           )}
