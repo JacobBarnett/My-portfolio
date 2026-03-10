@@ -34,7 +34,7 @@ async function generateCodeChallenge(verifier) {
 async function loginWithSpotify() {
   const verifier = generateCodeVerifier();
   const challenge = await generateCodeChallenge(verifier);
-  sessionStorage.setItem("spotify_verifier", verifier);
+  localStorage.setItem("spotify_verifier", verifier);
   const params = new URLSearchParams({
     client_id: CLIENT_ID,
     response_type: "code",
@@ -47,7 +47,7 @@ async function loginWithSpotify() {
 }
 
 async function exchangeToken(code) {
-  const verifier = sessionStorage.getItem("spotify_verifier");
+  const verifier = localStorage.getItem("spotify_verifier");
   if (!verifier) return null;
   const res = await fetch("https://accounts.spotify.com/api/token", {
     method: "POST",
@@ -68,7 +68,7 @@ async function exchangeToken(code) {
       "spotify_expires",
       Date.now() + data.expires_in * 1000,
     );
-    sessionStorage.removeItem("spotify_verifier");
+    localStorage.removeItem("spotify_verifier");
     window.history.replaceState({}, "", "/tesla");
     return data.access_token;
   }
