@@ -40,6 +40,71 @@ export default function SpotifyPanel({ onDisconnect }) {
   const searchTimeout = useRef(null);
   const progressInterval = useRef(null);
 
+  // ── Load Spotify Web Playback SDK ──
+  useEffect(() => {
+    const token = localStorage.getItem("spotify_token");
+    if (!token) return;
+
+    window.onSpotifyWebPlaybackSDKReady = () => {
+      const player = new window.Spotify.Player({
+        name: "Tesla UI",
+        getOAuthToken: (cb) => cb(token),
+        volume: 0.7,
+      });
+
+      player.addListener("ready", ({ device_id }) => {
+        console.log("Player ready! Device ID:", device_id);
+        setDeviceId(device_id);
+        spotifyFetch("/me/player", {
+          method: "PUT",
+          body: JSON.stringify({ device_ids: [device_id], play: false }),
+        });
+      });
+
+      player.addListener("not_ready", () => {
+        console.log("Player not ready");
+        setDeviceId(null);
+      });
+
+      player.addListener("player_state_changed", (state) => {
+        if (!state) return;
+        const track = state.track_window.current_track;
+        setNowPlaying({
+          id: track.id,
+          name: track.name,
+          artists: track.artists,
+          album: { name: track.album.name, images: track.album.images },
+          duration_ms: state.duration,
+        });
+        setIsPlaying(!state.paused);
+        setProgress(state.position);
+        setDuration(state.duration);
+      });
+
+      player.addListener("initialization_error", ({ message }) => {
+        console.error("Init error:", message);
+      });
+      player.addListener("authentication_error", ({ message }) => {
+        console.error("Auth error:", message);
+      });
+      player.addListener("account_error", ({ message }) => {
+        console.error("Account error:", message);
+      });
+
+      console.log("Connecting Spotify player...");
+      player.connect();
+    };
+
+    if (!window.Spotify) {
+      const script = document.createElement("script");
+      script.src = "https://sdk.scdn.co/spotify-player.js";
+      script.async = true;
+      document.body.appendChild(script);
+    } else {
+      window.onSpotifyWebPlaybackSDKReady();
+    }
+  }, []);
+
   // Fetch initial data
   useEffect(() => {
     const init = async () => {
