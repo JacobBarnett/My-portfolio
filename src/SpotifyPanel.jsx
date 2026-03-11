@@ -123,6 +123,7 @@ export default function SpotifyPanel({ onDisconnect }) {
     };
     init();
   }, []);
+
   const fetchPlayer = useCallback(async () => {
     const data = await spotifyFetch("/me/player");
     if (data && data.item) {
@@ -209,10 +210,11 @@ export default function SpotifyPanel({ onDisconnect }) {
     let allTracks = [];
     let offset = 0;
 
-    // Get total first
     const first = await spotifyFetch(
       `/playlists/${pl.id}/tracks?limit=50&offset=0`,
     );
+    console.log("first response:", first);
+
     if (first?.items) {
       allTracks = first.items
         .filter((i) => i.track)
@@ -244,6 +246,7 @@ export default function SpotifyPanel({ onDisconnect }) {
     setPlaylistTracks(allTracks);
     setLoading(false);
   };
+
   const openLiked = () => setView("liked");
 
   const handleSearch = (q) => {
