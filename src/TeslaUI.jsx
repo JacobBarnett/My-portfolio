@@ -14,6 +14,7 @@ const SCOPES = [
   "user-library-read",
   "playlist-read-private",
   "playlist-read-collaborative",
+  "streaming",
 ].join(" ");
 
 // ── PKCE HELPERS ──
