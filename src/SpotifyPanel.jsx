@@ -36,6 +36,7 @@ export default function SpotifyPanel({ onDisconnect }) {
   const [volume, setVolume] = useState(70);
   const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [deviceId, setDeviceId] = useState(null);
   const searchTimeout = useRef(null);
   const progressInterval = useRef(null);
 
@@ -95,7 +96,10 @@ export default function SpotifyPanel({ onDisconnect }) {
     const body = contextUri
       ? { context_uri: contextUri, offset: { uri } }
       : { uris: [uri] };
-    await spotifyFetch("/me/player/play", {
+    const endpoint = deviceId
+      ? `/me/player/play?device_id=${deviceId}`
+      : "/me/player/play";
+    await spotifyFetch(endpoint, {
       method: "PUT",
       body: JSON.stringify(body),
     });
