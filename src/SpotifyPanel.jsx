@@ -195,12 +195,28 @@ export default function SpotifyPanel({ onDisconnect }) {
     setView("playlist");
     setLoading(true);
     const data = await spotifyFetch(`/playlists/${pl.id}`);
-    if (data?.items?.items)
-      setPlaylistTracks(
-        data.items.items.filter((i) => i.item).map((i) => ({ track: i.item })),
-      );
-    else if (data?.tracks?.items)
-      setPlaylistTracks(data.tracks.items.filter((i) => i.track));
+    let tracks = [];
+    if (data?.items?.items) {
+      tracks = data.items.items
+        .filter((i) => i.item)
+        .map((i) => ({ track: i.item }));
+      // Fetch more pages if needed
+      let next = data.items.next;
+      while (next) {
+        const path = next.replace("https://api.spotify.com/v1", "");
+        const more = await spotifyFetch(path);
+        if (more?.items) {
+          tracks = [
+            ...tracks,
+            ...more.items.filter((i) => i.item).map((i) => ({ track: i.item })),
+          ];
+          next = more.next;
+        } else break;
+      }
+    } else if (data?.tracks?.items) {
+      tracks = data.tracks.items.filter((i) => i.track);
+    }
+    setPlaylistTracks(tracks);
     setLoading(false);
   };
 
@@ -215,7 +231,7 @@ export default function SpotifyPanel({ onDisconnect }) {
     }
     searchTimeout.current = setTimeout(async () => {
       const data = await spotifyFetch(
-        `/search?q=${encodeURIComponent(q)}&type=track,artist,album&limit=20`,
+        `/search?q=${encodeURIComponent(q)}&type=track,artist,album&limit=20&market=US`,
       );
       if (data) setSearchResults(data);
     }, 400);
