@@ -194,29 +194,30 @@ export default function SpotifyPanel({ onDisconnect }) {
     setActivePlaylist(pl);
     setView("playlist");
     setLoading(true);
-    const data = await spotifyFetch(`/playlists/${pl.id}`);
-    let tracks = [];
-    if (data?.items?.items) {
-      tracks = data.items.items
-        .filter((i) => i.item)
-        .map((i) => ({ track: i.item }));
-      // Fetch more pages if needed
-      let next = data.items.next;
-      while (next) {
-        const path = next.replace("https://api.spotify.com/v1", "");
-        const more = await spotifyFetch(path);
-        if (more?.items) {
-          tracks = [
-            ...tracks,
-            ...more.items.filter((i) => i.item).map((i) => ({ track: i.item })),
-          ];
-          next = more.next;
-        } else break;
-      }
-    } else if (data?.tracks?.items) {
-      tracks = data.tracks.items.filter((i) => i.track);
+
+    let allTracks = [];
+    let offset = 0;
+    const limit = 50;
+
+    while (true) {
+      const data = await spotifyFetch(
+        `/playlists/${pl.id}?offset=${offset}&limit=${limit}`,
+      );
+      if (!data) break;
+
+      const items = data.items?.items || data.tracks?.items || [];
+      const mapped = items
+        .filter((i) => i.item || i.track)
+        .map((i) => ({ track: i.item || i.track }));
+
+      allTracks = [...allTracks, ...mapped];
+
+      const total = data.items?.total || data.tracks?.total || 0;
+      offset += limit;
+      if (offset >= total || mapped.length === 0) break;
     }
-    setPlaylistTracks(tracks);
+
+    setPlaylistTracks(allTracks);
     setLoading(false);
   };
 
