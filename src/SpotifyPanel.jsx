@@ -211,11 +211,14 @@ export default function SpotifyPanel({ onDisconnect }) {
     setActivePlaylist(pl);
     setView("playlist");
     setLoading(true);
-    const data = await spotifyFetch(`/playlists/${pl.id}/tracks?limit=100`);
-    if (data?.items) setPlaylistTracks(data.items.filter((i) => i.track));
+    const data = await spotifyFetch(`/playlists/${pl.id}`);
+    if (data?.items?.items) {
+      setPlaylistTracks(data.items.items.filter((i) => i.track));
+    } else if (data?.tracks?.items) {
+      setPlaylistTracks(data.tracks.items.filter((i) => i.track));
+    }
     setLoading(false);
   };
-
   const openLiked = async () => {
     setView("liked");
   };
