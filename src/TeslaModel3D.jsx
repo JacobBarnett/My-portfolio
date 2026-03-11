@@ -3,7 +3,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 
-export default function TeslaModel3D() {
+export default function TeslaModel3D({ dayMode = false }) {
   const mountRef = useRef(null);
   const rendererRef = useRef(null);
   const frameRef = useRef(null);
@@ -18,7 +18,6 @@ export default function TeslaModel3D() {
     // Scene
     const scene = new THREE.Scene();
     scene.background = null;
-
     // Camera
     const camera = new THREE.PerspectiveCamera(40, W / H, 0.1, 100);
     camera.position.set(3, 2, 5);
@@ -66,32 +65,6 @@ export default function TeslaModel3D() {
     const rimLight = new THREE.DirectionalLight(0xffffff, 0.4);
     rimLight.position.set(0, 3, -6);
     scene.add(rimLight);
-
-    // Ground
-    const ground = new THREE.Mesh(
-      new THREE.PlaneGeometry(20, 12),
-      new THREE.MeshStandardMaterial({
-        color: 0x080808,
-        metalness: 0.9,
-        roughness: 0.2,
-      }),
-    );
-    ground.rotation.x = -Math.PI / 2;
-    ground.position.y = -0.01;
-    ground.receiveShadow = true;
-    scene.add(ground);
-
-    // Ground reflection glow
-    const glowGeo = new THREE.PlaneGeometry(6, 3);
-    const glowMat = new THREE.MeshBasicMaterial({
-      color: 0x223344,
-      transparent: true,
-      opacity: 0.15,
-    });
-    const glow = new THREE.Mesh(glowGeo, glowMat);
-    glow.rotation.x = -Math.PI / 2;
-    glow.position.y = -0.005;
-    scene.add(glow);
 
     // Load GLB
     const loader = new GLTFLoader();

@@ -301,21 +301,10 @@ function NavMap({ destination, activePanel }) {
       // Final invalidateSize immediately before the polyline
       mapInstanceRef.current.invalidateSize();
 
-      try {
-        routeLayerRef.current = L.polyline([[33.8868, -117.8878], destLatLng], {
-          color: "#3a7bd5",
-          weight: 3,
-          opacity: 0.8,
-          dashArray: "6,8",
-        }).addTo(mapInstanceRef.current);
-
-        mapInstanceRef.current.fitBounds([[33.8868, -117.8878], destLatLng], {
-          padding: [40, 40],
-          animate: false,
-        });
-      } catch (e) {
-        mapInstanceRef.current.setView(destLatLng, 10, { animate: false });
-      }
+      // Calculate midpoint and zoom to fit both points without fitBounds
+      const midLat = (33.8868 + destLatLng[0]) / 2;
+      const midLng = (-117.8878 + destLatLng[1]) / 2;
+      mapInstanceRef.current.setView([midLat, midLng], 10, { animate: false });
     };
 
     drawRoute();
@@ -336,7 +325,7 @@ export default function TeslaUI() {
   const [acOn, setAcOn] = useState(true);
   const [gear, setGear] = useState("P");
   const [brightness, setBrightness] = useState(80);
-  const [dayMode, setDayMode] = useState(false);
+  const [dayMode, setDayMode] = useState(true);
   const [activePanel, setActivePanel] = useState("home");
   const [batteryPct] = useState(87);
   const [range] = useState(247);
@@ -485,7 +474,7 @@ export default function TeslaUI() {
         {/* LEFT PANEL */}
         <div className="tesla-left">
           <div className="car-viz">
-            <TeslaModel3D />
+            <TeslaModel3D dayMode={dayMode} />
           </div>
           <div className="gear-selector">
             {["R", "N", "D", "P"].map((g) => (
@@ -743,10 +732,9 @@ export default function TeslaUI() {
               style={{
                 display: activePanel === "nav" ? "flex" : "none",
                 flexDirection: "column",
-                flex: 1,
                 overflow: "hidden",
                 padding: "0 1rem 1rem",
-                gap: "0.75rem",
+                height: "620px",
               }}
             >
               <NavMap destination={destination} activePanel={activePanel} />
