@@ -100,18 +100,29 @@ export default function SpotifyPanel({ onDisconnect }) {
 
   useEffect(() => {
     const init = async () => {
-      const [profile, pls, liked] = await Promise.all([
+      const [profile, pls] = await Promise.all([
         spotifyFetch("/me"),
         spotifyFetch("/me/playlists?limit=50"),
-        spotifyFetch("/me/tracks?limit=50"),
       ]);
       if (profile) setUserProfile(profile);
       if (pls?.items) setPlaylists(pls.items);
-      if (liked?.items) setLikedSongs(liked.items);
+
+      // Paginate all liked songs
+      let allLiked = [];
+      let offset = 0;
+      while (true) {
+        const liked = await spotifyFetch(
+          `/me/tracks?limit=50&offset=${offset}`,
+        );
+        if (!liked?.items?.length) break;
+        allLiked = [...allLiked, ...liked.items];
+        offset += 50;
+        if (offset >= liked.total) break;
+      }
+      setLikedSongs(allLiked);
     };
     init();
   }, []);
-
   const fetchPlayer = useCallback(async () => {
     const data = await spotifyFetch("/me/player");
     if (data && data.item) {
@@ -197,30 +208,42 @@ export default function SpotifyPanel({ onDisconnect }) {
 
     let allTracks = [];
     let offset = 0;
-    const limit = 50;
 
-    while (true) {
-      const data = await spotifyFetch(
-        `/playlists/${pl.id}?offset=${offset}&limit=${limit}`,
-      );
-      if (!data) break;
-
-      const items = data.items?.items || data.tracks?.items || [];
-      const mapped = items
-        .filter((i) => i.item || i.track)
-        .map((i) => ({ track: i.item || i.track }));
-
-      allTracks = [...allTracks, ...mapped];
-
-      const total = data.items?.total || data.tracks?.total || 0;
-      offset += limit;
-      if (offset >= total || mapped.length === 0) break;
+    // Get total first
+    const first = await spotifyFetch(
+      `/playlists/${pl.id}/tracks?limit=50&offset=0`,
+    );
+    if (first?.items) {
+      allTracks = first.items
+        .filter((i) => i.track)
+        .map((i) => ({ track: i.track }));
+      const total = first.total || 0;
+      offset = 50;
+      while (offset < total) {
+        const page = await spotifyFetch(
+          `/playlists/${pl.id}/tracks?limit=50&offset=${offset}`,
+        );
+        if (!page?.items?.length) break;
+        allTracks = [
+          ...allTracks,
+          ...page.items.filter((i) => i.track).map((i) => ({ track: i.track })),
+        ];
+        offset += 50;
+      }
+    } else {
+      // Fallback to old method if /tracks 403s
+      const data = await spotifyFetch(`/playlists/${pl.id}`);
+      if (data?.items?.items)
+        allTracks = data.items.items
+          .filter((i) => i.item)
+          .map((i) => ({ track: i.item }));
+      else if (data?.tracks?.items)
+        allTracks = data.tracks.items.filter((i) => i.track);
     }
 
     setPlaylistTracks(allTracks);
     setLoading(false);
   };
-
   const openLiked = () => setView("liked");
 
   const handleSearch = (q) => {
