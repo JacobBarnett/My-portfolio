@@ -12,8 +12,12 @@ async function spotifyFetch(endpoint, options = {}) {
       ...options.headers,
     },
   });
+  if (!res.ok) {
+    const err = await res.json();
+    console.error("Spotify error:", endpoint, res.status, err);
+    return null;
+  }
   if (res.status === 204 || res.status === 202) return {};
-  if (!res.ok) return null;
   try {
     return await res.json();
   } catch {
