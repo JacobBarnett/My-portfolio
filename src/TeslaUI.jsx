@@ -53,6 +53,9 @@ async function loginWithSpotify() {
 }
 
 async function exchangeToken(code, verifier) {
+  console.log("code:", code?.substring(0, 20));
+  console.log("verifier:", verifier?.substring(0, 20));
+  console.log("verifier length:", verifier?.length);
   if (!verifier) return null;
   const res = await fetch("https://accounts.spotify.com/api/token", {
     method: "POST",
