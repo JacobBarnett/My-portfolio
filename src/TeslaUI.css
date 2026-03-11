@@ -1056,3 +1056,14 @@
   background: var(--surface2) !important;
   color: var(--text) !important;
 }
+/* ── BRIGHTNESS OVERLAY ── */
+.tesla-wrapper::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background: #000;
+  opacity: var(--brightness-overlay, 0);
+  pointer-events: none;
+  z-index: 998;
+  transition: opacity 0.2s ease;
+}

@@ -142,12 +142,13 @@ function useClock() {
 }
 
 // ── MAP COMPONENT ──
-function NavMap({ destination }) {
+function NavMap({ destination, activePanel }) {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const routeLayerRef = useRef(null);
   const markerRef = useRef(null);
 
+  // Initialize map
   useEffect(() => {
     if (!document.getElementById("leaflet-css")) {
       const link = document.createElement("link");
@@ -167,6 +168,7 @@ function NavMap({ destination }) {
         script.onload = () => resolve(window.L);
         document.body.appendChild(script);
       });
+
     loadLeaflet().then((L) => {
       if (mapInstanceRef.current || !mapRef.current) return;
       const map = L.map(mapRef.current, {
@@ -188,6 +190,7 @@ function NavMap({ destination }) {
       L.marker([33.8868, -117.8878], { icon }).addTo(map);
       mapInstanceRef.current = map;
     });
+
     return () => {
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
@@ -196,42 +199,60 @@ function NavMap({ destination }) {
     };
   }, []);
 
+  // Invalidate size when nav tab becomes active
+  useEffect(() => {
+    if (activePanel !== "nav" || !mapInstanceRef.current) return;
+    setTimeout(() => {
+      mapInstanceRef.current.invalidateSize();
+    }, 100);
+  }, [activePanel]);
+
+  // Draw route to destination — waits for map to be sized first
   useEffect(() => {
     if (!destination || !mapInstanceRef.current) return;
     const L = window.L;
     if (!L) return;
-    fetch(
-      `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(destination)}&limit=1`,
-    )
-      .then((r) => r.json())
-      .then((results) => {
-        if (!results.length) return;
-        const { lat, lon, display_name } = results[0];
-        const destLatLng = [parseFloat(lat), parseFloat(lon)];
-        if (markerRef.current)
-          mapInstanceRef.current.removeLayer(markerRef.current);
-        if (routeLayerRef.current)
-          mapInstanceRef.current.removeLayer(routeLayerRef.current);
-        const destIcon = L.divIcon({
-          className: "",
-          html: '<div style="width:14px;height:14px;background:#3a7bd5;border-radius:50%;border:2px solid #fff;box-shadow:0 0 10px rgba(58,123,213,0.8);"></div>',
-          iconSize: [14, 14],
-          iconAnchor: [7, 7],
+
+    // Invalidate first, then draw after layout settles
+    mapInstanceRef.current.invalidateSize();
+
+    setTimeout(() => {
+      fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(destination)}&limit=1`,
+      )
+        .then((r) => r.json())
+        .then((results) => {
+          if (!results.length || !mapInstanceRef.current) return;
+          const { lat, lon, display_name } = results[0];
+          const destLatLng = [parseFloat(lat), parseFloat(lon)];
+
+          if (markerRef.current)
+            mapInstanceRef.current.removeLayer(markerRef.current);
+          if (routeLayerRef.current)
+            mapInstanceRef.current.removeLayer(routeLayerRef.current);
+
+          const destIcon = L.divIcon({
+            className: "",
+            html: '<div style="width:14px;height:14px;background:#3a7bd5;border-radius:50%;border:2px solid #fff;box-shadow:0 0 10px rgba(58,123,213,0.8);"></div>',
+            iconSize: [14, 14],
+            iconAnchor: [7, 7],
+          });
+
+          markerRef.current = L.marker(destLatLng, { icon: destIcon })
+            .addTo(mapInstanceRef.current)
+            .bindPopup(display_name.split(",").slice(0, 2).join(","))
+            .openPopup();
+
+          routeLayerRef.current = L.polyline(
+            [[33.8868, -117.8878], destLatLng],
+            { color: "#3a7bd5", weight: 3, opacity: 0.8, dashArray: "6,8" },
+          ).addTo(mapInstanceRef.current);
+
+          mapInstanceRef.current.fitBounds([[33.8868, -117.8878], destLatLng], {
+            padding: [40, 40],
+          });
         });
-        markerRef.current = L.marker(destLatLng, { icon: destIcon })
-          .addTo(mapInstanceRef.current)
-          .bindPopup(display_name.split(",").slice(0, 2).join(","))
-          .openPopup();
-        routeLayerRef.current = L.polyline([[33.8868, -117.8878], destLatLng], {
-          color: "#3a7bd5",
-          weight: 3,
-          opacity: 0.8,
-          dashArray: "6,8",
-        }).addTo(mapInstanceRef.current);
-        mapInstanceRef.current.fitBounds([[33.8868, -117.8878], destLatLng], {
-          padding: [40, 40],
-        });
-      });
+    }, 150); // wait for invalidateSize to finish before drawing
   }, [destination]);
 
   return <div ref={mapRef} className="leaflet-map" />;
@@ -356,7 +377,10 @@ export default function TeslaUI() {
   }
 
   return (
-    <div className={`tesla-wrapper${dayMode ? " day-mode" : ""}`}>
+    <div
+      className={`tesla-wrapper${dayMode ? " day-mode" : ""}`}
+      style={{ "--brightness-overlay": `${((100 - brightness) / 100) * 0.85}` }}
+    >
       {/* STATUS BAR */}
       <div className="tesla-statusbar">
         <div className="tsb-left">
@@ -607,7 +631,7 @@ export default function TeslaUI() {
                   </button>
                 </div>
               )}
-              <NavMap destination={destination} />
+              <NavMap destination={destination} activePanel={activePanel} />
             </div>
           )}
 
