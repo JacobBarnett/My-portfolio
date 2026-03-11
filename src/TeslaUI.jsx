@@ -39,8 +39,6 @@ async function generateCodeChallenge(verifier) {
 async function loginWithSpotify() {
   const verifier = generateCodeVerifier();
   const challenge = await generateCodeChallenge(verifier);
-  localStorage.setItem("spotify_verifier", verifier);
-  localStorage.setItem("spotify_post_login_panel", "music");
   const params = new URLSearchParams({
     client_id: CLIENT_ID,
     response_type: "code",
@@ -48,13 +46,13 @@ async function loginWithSpotify() {
     scope: SCOPES,
     code_challenge_method: "S256",
     code_challenge: challenge,
+    state: verifier,
     show_dialog: "true",
   });
   window.location.href = `https://accounts.spotify.com/authorize?${params}`;
 }
 
-async function exchangeToken(code) {
-  const verifier = localStorage.getItem("spotify_verifier");
+async function exchangeToken(code, verifier) {
   if (!verifier) return null;
   const res = await fetch("https://accounts.spotify.com/api/token", {
     method: "POST",
@@ -75,7 +73,6 @@ async function exchangeToken(code) {
       "spotify_expires",
       Date.now() + data.expires_in * 1000,
     );
-    localStorage.removeItem("spotify_verifier");
     return data.access_token;
   }
   return null;
@@ -102,6 +99,10 @@ async function doRefreshToken() {
     );
     return data.access_token;
   }
+  // Refresh failed - clear everything to prevent infinite loop
+  localStorage.removeItem("spotify_token");
+  localStorage.removeItem("spotify_refresh");
+  localStorage.removeItem("spotify_expires");
   return null;
 }
 
@@ -260,24 +261,21 @@ export default function TeslaUI() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const code = params.get("code");
+    const verifier = params.get("state");
     const error = params.get("error");
     if (error) {
       window.history.replaceState({}, "", window.location.pathname);
       return;
     }
-    if (code) {
+    if (code && verifier) {
       setAuthLoading(true);
-      exchangeToken(code)
+      exchangeToken(code, verifier)
         .then((t) => {
           setAuthLoading(false);
           if (t) {
             setToken(t);
-            const panel =
-              localStorage.getItem("spotify_post_login_panel") || "music";
-            localStorage.removeItem("spotify_post_login_panel");
-            setActivePanel(panel);
+            setActivePanel("music");
           }
-          // Clean the URL regardless
           window.history.replaceState({}, "", window.location.pathname);
         })
         .catch(() => {
