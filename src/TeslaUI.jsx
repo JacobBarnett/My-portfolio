@@ -141,6 +141,23 @@ function useClock() {
   return time;
 }
 
+// ── Polls until container has real pixel dimensions, then resolves ──
+function waitForSize(el, maxMs = 3000) {
+  return new Promise((resolve, reject) => {
+    const start = Date.now();
+    const check = () => {
+      if (el && el.clientWidth > 0 && el.clientHeight > 0) {
+        resolve();
+      } else if (Date.now() - start > maxMs) {
+        reject(new Error("map container never got a size"));
+      } else {
+        requestAnimationFrame(check);
+      }
+    };
+    check();
+  });
+}
+
 // ── MAP COMPONENT ──
 function NavMap({ destination, activePanel }) {
   const mapRef = useRef(null);
@@ -148,7 +165,7 @@ function NavMap({ destination, activePanel }) {
   const routeLayerRef = useRef(null);
   const markerRef = useRef(null);
 
-  // Initialize map
+  // Initialize map once — but only after the container has real dimensions
   useEffect(() => {
     if (!document.getElementById("leaflet-css")) {
       const link = document.createElement("link");
@@ -157,6 +174,7 @@ function NavMap({ destination, activePanel }) {
       link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
       document.head.appendChild(link);
     }
+
     const loadLeaflet = () =>
       new Promise((resolve) => {
         if (window.L) {
@@ -169,18 +187,30 @@ function NavMap({ destination, activePanel }) {
         document.body.appendChild(script);
       });
 
-    loadLeaflet().then((L) => {
+    loadLeaflet().then(async (L) => {
       if (mapInstanceRef.current || !mapRef.current) return;
+
+      // Don't init until the container is actually painted and sized
+      try {
+        await waitForSize(mapRef.current);
+      } catch {
+        return;
+      }
+
       const map = L.map(mapRef.current, {
         center: [33.8868, -117.8878],
         zoom: 13,
         zoomControl: true,
         attributionControl: false,
+        zoomAnimation: false,
+        fadeAnimation: false,
       });
+
       L.tileLayer(
         "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
         { maxZoom: 19 },
       ).addTo(map);
+
       const icon = L.divIcon({
         className: "",
         html: '<div style="width:14px;height:14px;background:#e82127;border-radius:50%;border:2px solid #fff;box-shadow:0 0 10px rgba(232,33,39,0.8);"></div>',
@@ -199,60 +229,96 @@ function NavMap({ destination, activePanel }) {
     };
   }, []);
 
-  // Invalidate size when nav tab becomes active
+  // Re-validate map size whenever the nav tab becomes visible
   useEffect(() => {
     if (activePanel !== "nav" || !mapInstanceRef.current) return;
-    setTimeout(() => {
-      mapInstanceRef.current.invalidateSize();
-    }, 100);
+    // Double rAF ensures the DOM has fully painted before measuring
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (mapInstanceRef.current) mapInstanceRef.current.invalidateSize();
+      });
+    });
   }, [activePanel]);
 
-  // Draw route to destination — waits for map to be sized first
+  // Draw route to destination
   useEffect(() => {
-    if (!destination || !mapInstanceRef.current) return;
-    const L = window.L;
-    if (!L) return;
+    if (!destination) return;
 
-    // Invalidate first, then draw after layout settles
-    mapInstanceRef.current.invalidateSize();
+    const drawRoute = async () => {
+      // Wait until map is initialised AND container has size
+      let attempts = 0;
+      while (
+        !mapInstanceRef.current ||
+        !mapRef.current ||
+        mapRef.current.clientWidth === 0
+      ) {
+        if (attempts++ > 60) return; // give up after ~3s
+        await new Promise((r) => setTimeout(r, 50));
+      }
 
-    setTimeout(() => {
-      fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(destination)}&limit=1`,
-      )
-        .then((r) => r.json())
-        .then((results) => {
-          if (!results.length || !mapInstanceRef.current) return;
-          const { lat, lon, display_name } = results[0];
-          const destLatLng = [parseFloat(lat), parseFloat(lon)];
+      const L = window.L;
+      if (!L || !mapInstanceRef.current) return;
 
-          if (markerRef.current)
-            mapInstanceRef.current.removeLayer(markerRef.current);
-          if (routeLayerRef.current)
-            mapInstanceRef.current.removeLayer(routeLayerRef.current);
+      // Force Leaflet to recalculate container size before adding any layers
+      mapInstanceRef.current.invalidateSize();
 
-          const destIcon = L.divIcon({
-            className: "",
-            html: '<div style="width:14px;height:14px;background:#3a7bd5;border-radius:50%;border:2px solid #fff;box-shadow:0 0 10px rgba(58,123,213,0.8);"></div>',
-            iconSize: [14, 14],
-            iconAnchor: [7, 7],
-          });
+      // Small yield so invalidateSize finishes its internal rAF
+      await new Promise((r) => requestAnimationFrame(r));
+      await new Promise((r) => requestAnimationFrame(r));
 
-          markerRef.current = L.marker(destLatLng, { icon: destIcon })
-            .addTo(mapInstanceRef.current)
-            .bindPopup(display_name.split(",").slice(0, 2).join(","))
-            .openPopup();
+      let results;
+      try {
+        const r = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(destination)}&limit=1`,
+        );
+        results = await r.json();
+      } catch {
+        return;
+      }
 
-          routeLayerRef.current = L.polyline(
-            [[33.8868, -117.8878], destLatLng],
-            { color: "#3a7bd5", weight: 3, opacity: 0.8, dashArray: "6,8" },
-          ).addTo(mapInstanceRef.current);
+      if (!results.length || !mapInstanceRef.current) return;
 
-          mapInstanceRef.current.fitBounds([[33.8868, -117.8878], destLatLng], {
-            padding: [40, 40],
-          });
+      const { lat, lon, display_name } = results[0];
+      const destLatLng = [parseFloat(lat), parseFloat(lon)];
+
+      if (markerRef.current)
+        mapInstanceRef.current.removeLayer(markerRef.current);
+      if (routeLayerRef.current)
+        mapInstanceRef.current.removeLayer(routeLayerRef.current);
+
+      const destIcon = L.divIcon({
+        className: "",
+        html: '<div style="width:14px;height:14px;background:#3a7bd5;border-radius:50%;border:2px solid #fff;box-shadow:0 0 10px rgba(58,123,213,0.8);"></div>',
+        iconSize: [14, 14],
+        iconAnchor: [7, 7],
+      });
+
+      markerRef.current = L.marker(destLatLng, { icon: destIcon })
+        .addTo(mapInstanceRef.current)
+        .bindPopup(display_name.split(",").slice(0, 2).join(","))
+        .openPopup();
+
+      // Final invalidateSize immediately before the polyline
+      mapInstanceRef.current.invalidateSize();
+
+      try {
+        routeLayerRef.current = L.polyline([[33.8868, -117.8878], destLatLng], {
+          color: "#3a7bd5",
+          weight: 3,
+          opacity: 0.8,
+          dashArray: "6,8",
+        }).addTo(mapInstanceRef.current);
+
+        mapInstanceRef.current.fitBounds([[33.8868, -117.8878], destLatLng], {
+          padding: [40, 40],
+          animate: false,
         });
-    }, 150); // wait for invalidateSize to finish before drawing
+      } catch (e) {
+        mapInstanceRef.current.setView(destLatLng, 10, { animate: false });
+      }
+    };
+
+    drawRoute();
   }, [destination]);
 
   return <div ref={mapRef} className="leaflet-map" />;
@@ -270,13 +336,14 @@ export default function TeslaUI() {
   const [acOn, setAcOn] = useState(true);
   const [gear, setGear] = useState("P");
   const [brightness, setBrightness] = useState(80);
-  const [dayMode, setDayMode] = useState(false); // ← NEW
+  const [dayMode, setDayMode] = useState(false);
   const [activePanel, setActivePanel] = useState("home");
   const [batteryPct] = useState(87);
   const [range] = useState(247);
   const [navInput, setNavInput] = useState("");
   const [destination, setDestination] = useState("");
   const [navHistory, setNavHistory] = useState([]);
+  const [navVisited, setNavVisited] = useState(false);
 
   // ── Handle Spotify OAuth callback ──
   useEffect(() => {
@@ -399,7 +466,6 @@ export default function TeslaUI() {
             <span className="tsb-range">{range} mi</span>
           </div>
         </div>
-        {/* ── DAY/NIGHT TOGGLE + SPEED ── */}
         <div className="tsb-right">
           <button
             className="tsb-daynight"
@@ -473,7 +539,10 @@ export default function TeslaUI() {
               <button
                 key={tab.id}
                 className={`center-tab ${activePanel === tab.id ? "active" : ""}`}
-                onClick={() => setActivePanel(tab.id)}
+                onClick={() => {
+                  setActivePanel(tab.id);
+                  if (tab.id === "nav") setNavVisited(true);
+                }}
               >
                 <span className="tab-icon">{tab.icon}</span>
                 <span className="tab-label">{tab.label}</span>
@@ -631,7 +700,6 @@ export default function TeslaUI() {
                   </button>
                 </div>
               )}
-              <NavMap destination={destination} activePanel={activePanel} />
             </div>
           )}
 
@@ -658,7 +726,6 @@ export default function TeslaUI() {
                   <span className="setting-value">{s.value}</span>
                 </div>
               ))}
-              {/* Day/Night toggle in settings too for discoverability */}
               <div className="setting-row">
                 <span className="setting-label">Display Mode</span>
                 <button
@@ -668,6 +735,21 @@ export default function TeslaUI() {
                   {dayMode ? "☀️ Day" : "🌙 Night"}
                 </button>
               </div>
+            </div>
+          )}
+          {/* NAV MAP — stays mounted once nav is visited */}
+          {navVisited && (
+            <div
+              style={{
+                display: activePanel === "nav" ? "flex" : "none",
+                flexDirection: "column",
+                flex: 1,
+                overflow: "hidden",
+                padding: "0 1rem 1rem",
+                gap: "0.75rem",
+              }}
+            >
+              <NavMap destination={destination} activePanel={activePanel} />
             </div>
           )}
         </div>
