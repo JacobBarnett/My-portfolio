@@ -213,9 +213,9 @@ export default function SpotifyPanel({ onDisconnect }) {
     setLoading(true);
     const data = await spotifyFetch(`/playlists/${pl.id}`);
     if (data?.items?.items) {
-      setPlaylistTracks(data.items.items.filter((i) => i.track));
-    } else if (data?.tracks?.items) {
-      setPlaylistTracks(data.tracks.items.filter((i) => i.track));
+      setPlaylistTracks(
+        data.items.items.filter((i) => i.item).map((i) => ({ track: i.item })),
+      );
     }
     setLoading(false);
   };
