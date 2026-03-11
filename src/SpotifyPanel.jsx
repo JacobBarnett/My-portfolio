@@ -100,26 +100,14 @@ export default function SpotifyPanel({ onDisconnect }) {
 
   useEffect(() => {
     const init = async () => {
-      const [profile, pls] = await Promise.all([
+      const [profile, pls, liked] = await Promise.all([
         spotifyFetch("/me"),
         spotifyFetch("/me/playlists?limit=50"),
+        spotifyFetch("/me/tracks?limit=50"),
       ]);
       if (profile) setUserProfile(profile);
       if (pls?.items) setPlaylists(pls.items);
-
-      // Paginate all liked songs
-      let allLiked = [];
-      let offset = 0;
-      while (true) {
-        const liked = await spotifyFetch(
-          `/me/tracks?limit=50&offset=${offset}`,
-        );
-        if (!liked?.items?.length) break;
-        allLiked = [...allLiked, ...liked.items];
-        offset += 50;
-        if (offset >= liked.total) break;
-      }
-      setLikedSongs(allLiked);
+      if (liked?.items) setLikedSongs(liked.items);
     };
     init();
   }, []);
@@ -255,7 +243,21 @@ export default function SpotifyPanel({ onDisconnect }) {
     setLoading(false);
   };
 
-  const openLiked = () => setView("liked");
+  const openLiked = async () => {
+    setView("liked");
+    setLoading(true);
+    let allLiked = [];
+    let offset = 0;
+    while (true) {
+      const liked = await spotifyFetch(`/me/tracks?limit=50&offset=${offset}`);
+      if (!liked?.items?.length) break;
+      allLiked = [...allLiked, ...liked.items];
+      offset += 50;
+      if (offset >= liked.total) break;
+    }
+    setLikedSongs(allLiked);
+    setLoading(false);
+  };
 
   const handleSearch = (q) => {
     setSearchQuery(q);
