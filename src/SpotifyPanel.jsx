@@ -213,9 +213,9 @@ export default function SpotifyPanel({ onDisconnect }) {
     const first = await spotifyFetch(
       `/playlists/${pl.id}/tracks?limit=50&offset=0`,
     );
-    console.log("first response:", first);
 
     if (first?.items) {
+      // Normal path (works in production)
       allTracks = first.items
         .filter((i) => i.track)
         .map((i) => ({ track: i.track }));
@@ -233,14 +233,22 @@ export default function SpotifyPanel({ onDisconnect }) {
         offset += 50;
       }
     } else {
-      // Fallback to old method if /tracks 403s
-      const data = await spotifyFetch(`/playlists/${pl.id}`);
-      if (data?.items?.items)
-        allTracks = data.items.items
-          .filter((i) => i.item)
-          .map((i) => ({ track: i.item }));
-      else if (data?.tracks?.items)
-        allTracks = data.tracks.items.filter((i) => i.track);
+      // Dev mode fallback - paginate via /playlists/{id}?fields=...
+      while (true) {
+        const data = await spotifyFetch(
+          `/playlists/${pl.id}?offset=${offset}&limit=50`,
+        );
+        if (!data) break;
+        const items = data.items?.items || data.tracks?.items || [];
+        const mapped = items
+          .filter((i) => i.item || i.track)
+          .map((i) => ({ track: i.item || i.track }));
+        if (!mapped.length) break;
+        allTracks = [...allTracks, ...mapped];
+        const total = data.items?.total || data.tracks?.total || 0;
+        offset += 50;
+        if (offset >= total) break;
+      }
     }
 
     setPlaylistTracks(allTracks);
