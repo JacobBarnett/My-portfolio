@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import "./TeslaUI.css";
 import SpotifyPanel from "./SpotifyPanel";
+import TeslaModel3D from "./TeslaModel3D";
 
 // ── SPOTIFY CONFIG ──
 const CLIENT_ID = "235a98443cd04cc88e4cbe64c9badd7f";
@@ -14,7 +15,6 @@ const SCOPES = [
   "user-library-read",
   "playlist-read-private",
   "playlist-read-collaborative",
-  "streaming",
 ].join(" ");
 
 // ── PKCE HELPERS ──
@@ -39,6 +39,8 @@ async function generateCodeChallenge(verifier) {
 async function loginWithSpotify() {
   const verifier = generateCodeVerifier();
   const challenge = await generateCodeChallenge(verifier);
+  localStorage.setItem("spotify_verifier", verifier);
+  localStorage.setItem("spotify_post_login_panel", "music");
   const params = new URLSearchParams({
     client_id: CLIENT_ID,
     response_type: "code",
@@ -46,13 +48,12 @@ async function loginWithSpotify() {
     scope: SCOPES,
     code_challenge_method: "S256",
     code_challenge: challenge,
-    state: verifier,
-    show_dialog: "true",
   });
   window.location.href = `https://accounts.spotify.com/authorize?${params}`;
 }
 
-async function exchangeToken(code, verifier) {
+async function exchangeToken(code) {
+  const verifier = localStorage.getItem("spotify_verifier");
   if (!verifier) return null;
   const res = await fetch("https://accounts.spotify.com/api/token", {
     method: "POST",
@@ -73,6 +74,7 @@ async function exchangeToken(code, verifier) {
       "spotify_expires",
       Date.now() + data.expires_in * 1000,
     );
+    localStorage.removeItem("spotify_verifier");
     return data.access_token;
   }
   return null;
@@ -99,10 +101,6 @@ async function doRefreshToken() {
     );
     return data.access_token;
   }
-  // Refresh failed - clear everything to prevent infinite loop
-  localStorage.removeItem("spotify_token");
-  localStorage.removeItem("spotify_refresh");
-  localStorage.removeItem("spotify_expires");
   return null;
 }
 
@@ -246,6 +244,7 @@ export default function TeslaUI() {
   const [authLoading, setAuthLoading] = useState(false);
   const [nowPlaying, setNowPlaying] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [, setVolume] = useState(50);
   const [temp, setTemp] = useState(72);
   const [acOn, setAcOn] = useState(true);
   const [gear, setGear] = useState("P");
@@ -261,21 +260,24 @@ export default function TeslaUI() {
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const code = params.get("code");
-    const verifier = params.get("state");
     const error = params.get("error");
     if (error) {
       window.history.replaceState({}, "", window.location.pathname);
       return;
     }
-    if (code && verifier) {
+    if (code) {
       setAuthLoading(true);
-      exchangeToken(code, verifier)
+      exchangeToken(code)
         .then((t) => {
           setAuthLoading(false);
           if (t) {
             setToken(t);
-            setActivePanel("music");
+            const panel =
+              localStorage.getItem("spotify_post_login_panel") || "music";
+            localStorage.removeItem("spotify_post_login_panel");
+            setActivePanel(panel);
           }
+          // Clean the URL regardless
           window.history.replaceState({}, "", window.location.pathname);
         })
         .catch(() => {
@@ -292,6 +294,7 @@ export default function TeslaUI() {
     if (data && data.item) {
       setNowPlaying(data.item);
       setIsPlaying(data.is_playing);
+      setVolume(data.device?.volume_percent ?? 50);
     } else {
       setNowPlaying(null);
       setIsPlaying(false);
@@ -319,7 +322,12 @@ export default function TeslaUI() {
     await spotifyFetch("/me/player/previous", { method: "POST" });
     setTimeout(fetchNowPlaying, 900);
   };
-
+  // const handleVolume = async (v) => {
+  //   setVolume(v);
+  //   await spotifyFetch(`/me/player/volume?volume_percent=${v}`, {
+  //     method: "PUT",
+  //   });
+  // };
   const logout = () => {
     localStorage.removeItem("spotify_token");
     localStorage.removeItem("spotify_refresh");
@@ -385,82 +393,7 @@ export default function TeslaUI() {
         {/* LEFT PANEL */}
         <div className="tesla-left">
           <div className="car-viz">
-            <svg viewBox="0 0 300 160" className="car-svg">
-              <defs>
-                <linearGradient id="bodyGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stopColor="#e8e8e8" />
-                  <stop offset="100%" stopColor="#a0a0a0" />
-                </linearGradient>
-                <linearGradient
-                  id="windowGrad"
-                  x1="0%"
-                  y1="0%"
-                  x2="0%"
-                  y2="100%"
-                >
-                  <stop offset="0%" stopColor="#1a3a5c" stopOpacity="0.9" />
-                  <stop offset="100%" stopColor="#0a1a2c" stopOpacity="0.95" />
-                </linearGradient>
-              </defs>
-              <ellipse
-                cx="150"
-                cy="148"
-                rx="110"
-                ry="8"
-                fill="rgba(0,0,0,0.3)"
-              />
-              <path
-                d="M 40 110 Q 40 90 60 85 L 90 65 Q 120 45 150 43 Q 180 43 210 55 L 245 75 Q 265 82 268 95 L 270 110 Q 270 120 260 122 L 40 122 Q 30 120 40 110 Z"
-                fill="url(#bodyGrad)"
-              />
-              <path
-                d="M 95 68 Q 130 44 168 43 Q 200 43 220 57 L 245 75 Q 220 70 195 68 L 105 68 Z"
-                fill="#c8c8c8"
-              />
-              <path
-                d="M 100 68 L 148 48 L 175 48 L 195 68 Z"
-                fill="url(#windowGrad)"
-                opacity="0.9"
-              />
-              <path
-                d="M 198 68 L 222 58 L 242 72 L 242 68 Z"
-                fill="url(#windowGrad)"
-                opacity="0.9"
-              />
-              <line
-                x1="155"
-                y1="68"
-                x2="158"
-                y2="122"
-                stroke="#999"
-                strokeWidth="1"
-                opacity="0.5"
-              />
-              <circle cx="90" cy="122" r="20" fill="#1a1a1a" />
-              <circle cx="90" cy="122" r="14" fill="#2a2a2a" />
-              <circle cx="90" cy="122" r="7" fill="#3a3a3a" />
-              <circle cx="90" cy="122" r="3" fill="#888" />
-              <circle cx="210" cy="122" r="20" fill="#1a1a1a" />
-              <circle cx="210" cy="122" r="14" fill="#2a2a2a" />
-              <circle cx="210" cy="122" r="7" fill="#3a3a3a" />
-              <circle cx="210" cy="122" r="3" fill="#888" />
-              <path
-                d="M 265 88 L 272 90 L 272 96 L 265 95 Z"
-                fill="#fffbe6"
-                opacity="0.9"
-              />
-              <text
-                x="150"
-                y="108"
-                textAnchor="middle"
-                fontSize="14"
-                fontWeight="bold"
-                fill="#cc0000"
-                fontFamily="serif"
-              >
-                T
-              </text>
-            </svg>
+            <TeslaModel3D />
           </div>
           <div className="gear-selector">
             {["R", "N", "D", "P"].map((g) => (
