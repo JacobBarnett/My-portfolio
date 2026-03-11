@@ -49,7 +49,10 @@ export default function SpotifyPanel({ onDisconnect }) {
     window.onSpotifyWebPlaybackSDKReady = () => {
       const player = new window.Spotify.Player({
         name: "Tesla UI",
-        getOAuthToken: (cb) => cb(token),
+        getOAuthToken: (cb) => {
+          const freshToken = localStorage.getItem("spotify_token");
+          cb(freshToken);
+        },
         volume: 0.7,
       });
       player.addListener("ready", ({ device_id }) => {
@@ -253,7 +256,8 @@ export default function SpotifyPanel({ onDisconnect }) {
       if (!liked?.items?.length) break;
       allLiked = [...allLiked, ...liked.items];
       offset += 50;
-      if (offset >= liked.total) break;
+      if (offset >= liked.total || offset >= 200) break; // cap at 200
+      await new Promise((r) => setTimeout(r, 100)); // small delay between pages
     }
     setLikedSongs(allLiked);
     setLoading(false);
