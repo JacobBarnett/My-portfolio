@@ -249,6 +249,7 @@ export default function TeslaUI() {
   const [acOn, setAcOn] = useState(true);
   const [gear, setGear] = useState("P");
   const [brightness, setBrightness] = useState(80);
+  const [dayMode, setDayMode] = useState(false); // ← NEW
   const [activePanel, setActivePanel] = useState("home");
   const [batteryPct] = useState(87);
   const [range] = useState(247);
@@ -277,7 +278,6 @@ export default function TeslaUI() {
             localStorage.removeItem("spotify_post_login_panel");
             setActivePanel(panel);
           }
-          // Clean the URL regardless
           window.history.replaceState({}, "", window.location.pathname);
         })
         .catch(() => {
@@ -322,12 +322,6 @@ export default function TeslaUI() {
     await spotifyFetch("/me/player/previous", { method: "POST" });
     setTimeout(fetchNowPlaying, 900);
   };
-  // const handleVolume = async (v) => {
-  //   setVolume(v);
-  //   await spotifyFetch(`/me/player/volume?volume_percent=${v}`, {
-  //     method: "PUT",
-  //   });
-  // };
   const logout = () => {
     localStorage.removeItem("spotify_token");
     localStorage.removeItem("spotify_refresh");
@@ -362,7 +356,7 @@ export default function TeslaUI() {
   }
 
   return (
-    <div className="tesla-wrapper">
+    <div className={`tesla-wrapper${dayMode ? " day-mode" : ""}`}>
       {/* STATUS BAR */}
       <div className="tesla-statusbar">
         <div className="tsb-left">
@@ -381,7 +375,15 @@ export default function TeslaUI() {
             <span className="tsb-range">{range} mi</span>
           </div>
         </div>
+        {/* ── DAY/NIGHT TOGGLE + SPEED ── */}
         <div className="tsb-right">
+          <button
+            className="tsb-daynight"
+            onClick={() => setDayMode((d) => !d)}
+            title={dayMode ? "Switch to Night Mode" : "Switch to Day Mode"}
+          >
+            {dayMode ? "🌙" : "☀️"}
+          </button>
           <span className="tsb-speed">
             0 <small>mph</small>
           </span>
@@ -632,6 +634,16 @@ export default function TeslaUI() {
                   <span className="setting-value">{s.value}</span>
                 </div>
               ))}
+              {/* Day/Night toggle in settings too for discoverability */}
+              <div className="setting-row">
+                <span className="setting-label">Display Mode</span>
+                <button
+                  className="setting-mode-btn"
+                  onClick={() => setDayMode((d) => !d)}
+                >
+                  {dayMode ? "☀️ Day" : "🌙 Night"}
+                </button>
+              </div>
             </div>
           )}
         </div>
