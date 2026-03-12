@@ -7,6 +7,7 @@ import TeslaModel3D from "./TeslaModel3D";
 const CLIENT_ID = "235a98443cd04cc88e4cbe64c9badd7f";
 const REDIRECT_URI = "https://jacobbarnett.dev/callback";
 const SCOPES = [
+  "streaming",
   "user-read-playback-state",
   "user-modify-playback-state",
   "user-read-currently-playing",
@@ -69,7 +70,6 @@ async function exchangeToken(code) {
   const data = await res.json();
   if (data.access_token) {
     localStorage.setItem("spotify_token", data.access_token);
-    localStorage.setItem("spotify_refresh", data.refresh_token || "");
     localStorage.setItem(
       "spotify_expires",
       Date.now() + data.expires_in * 1000,
@@ -80,39 +80,9 @@ async function exchangeToken(code) {
   return null;
 }
 
-async function doRefreshToken() {
-  const refresh = localStorage.getItem("spotify_refresh");
-  if (!refresh) return null;
-  const res = await fetch("https://accounts.spotify.com/api/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      client_id: CLIENT_ID,
-      grant_type: "refresh_token",
-      refresh_token: refresh,
-    }),
-  });
-  const data = await res.json();
-  if (data.access_token) {
-    localStorage.setItem("spotify_token", data.access_token);
-    localStorage.setItem(
-      "spotify_expires",
-      Date.now() + data.expires_in * 1000,
-    );
-    return data.access_token;
-  }
-  return null;
-}
-
-async function getValidToken() {
-  const expires = parseInt(localStorage.getItem("spotify_expires") || "0");
-  if (Date.now() < expires - 60000)
-    return localStorage.getItem("spotify_token");
-  return await doRefreshToken();
-}
-
+// ── SPOTIFY FETCH — reads token directly, no refresh attempt ──
 async function spotifyFetch(endpoint, options = {}) {
-  const token = await getValidToken();
+  const token = localStorage.getItem("spotify_token");
   if (!token) return null;
   const res = await fetch(`https://api.spotify.com/v1${endpoint}`, {
     ...options,
@@ -141,7 +111,6 @@ function useClock() {
   return time;
 }
 
-// ── Polls until container has real pixel dimensions, then resolves ──
 function waitForSize(el, maxMs = 3000) {
   return new Promise((resolve, reject) => {
     const start = Date.now();
@@ -165,7 +134,6 @@ function NavMap({ destination, activePanel }) {
   const routeLayerRef = useRef(null);
   const markerRef = useRef(null);
 
-  // Initialize map once — but only after the container has real dimensions
   useEffect(() => {
     if (!document.getElementById("leaflet-css")) {
       const link = document.createElement("link");
@@ -189,8 +157,6 @@ function NavMap({ destination, activePanel }) {
 
     loadLeaflet().then(async (L) => {
       if (mapInstanceRef.current || !mapRef.current) return;
-
-      // Don't init until the container is actually painted and sized
       try {
         await waitForSize(mapRef.current);
       } catch {
@@ -229,10 +195,8 @@ function NavMap({ destination, activePanel }) {
     };
   }, []);
 
-  // Re-validate map size whenever the nav tab becomes visible
   useEffect(() => {
     if (activePanel !== "nav" || !mapInstanceRef.current) return;
-    // Double rAF ensures the DOM has fully painted before measuring
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         if (mapInstanceRef.current) mapInstanceRef.current.invalidateSize();
@@ -240,29 +204,22 @@ function NavMap({ destination, activePanel }) {
     });
   }, [activePanel]);
 
-  // Draw route to destination
   useEffect(() => {
     if (!destination) return;
-
     const drawRoute = async () => {
-      // Wait until map is initialised AND container has size
       let attempts = 0;
       while (
         !mapInstanceRef.current ||
         !mapRef.current ||
         mapRef.current.clientWidth === 0
       ) {
-        if (attempts++ > 60) return; // give up after ~3s
+        if (attempts++ > 60) return;
         await new Promise((r) => setTimeout(r, 50));
       }
-
       const L = window.L;
       if (!L || !mapInstanceRef.current) return;
 
-      // Force Leaflet to recalculate container size before adding any layers
       mapInstanceRef.current.invalidateSize();
-
-      // Small yield so invalidateSize finishes its internal rAF
       await new Promise((r) => requestAnimationFrame(r));
       await new Promise((r) => requestAnimationFrame(r));
 
@@ -277,7 +234,6 @@ function NavMap({ destination, activePanel }) {
       }
 
       if (!results.length || !mapInstanceRef.current) return;
-
       const { lat, lon, display_name } = results[0];
       const destLatLng = [parseFloat(lat), parseFloat(lon)];
 
@@ -298,15 +254,11 @@ function NavMap({ destination, activePanel }) {
         .bindPopup(display_name.split(",").slice(0, 2).join(","))
         .openPopup();
 
-      // Final invalidateSize immediately before the polyline
       mapInstanceRef.current.invalidateSize();
-
-      // Calculate midpoint and zoom to fit both points without fitBounds
       const midLat = (33.8868 + destLatLng[0]) / 2;
       const midLng = (-117.8878 + destLatLng[1]) / 2;
       mapInstanceRef.current.setView([midLat, midLng], 10, { animate: false });
     };
-
     drawRoute();
   }, [destination]);
 
@@ -364,6 +316,20 @@ export default function TeslaUI() {
     }
   }, []);
 
+  // ── Token expiry check — silently log out instead of attempting refresh ──
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const expiry = localStorage.getItem("spotify_expires");
+      if (expiry && Date.now() > parseInt(expiry) - 120000) {
+        localStorage.removeItem("spotify_token");
+        localStorage.removeItem("spotify_expires");
+        setToken(null);
+        setNowPlaying(null);
+      }
+    }, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
   // ── Poll now playing ──
   const fetchNowPlaying = useCallback(async () => {
     if (!token) return;
@@ -399,13 +365,14 @@ export default function TeslaUI() {
     await spotifyFetch("/me/player/previous", { method: "POST" });
     setTimeout(fetchNowPlaying, 900);
   };
+
   const logout = () => {
     localStorage.removeItem("spotify_token");
-    localStorage.removeItem("spotify_refresh");
     localStorage.removeItem("spotify_expires");
     setToken(null);
     setNowPlaying(null);
   };
+
   const handleNavGo = () => {
     if (!navInput.trim()) return;
     setDestination(navInput.trim());
@@ -638,7 +605,7 @@ export default function TeslaUI() {
                   </button>
                 </div>
               ) : (
-                <SpotifyPanel onDisconnect={logout} />
+                <SpotifyPanel onDisconnect={logout} dayMode={dayMode} />
               )}
             </div>
           )}
@@ -726,6 +693,7 @@ export default function TeslaUI() {
               </div>
             </div>
           )}
+
           {/* NAV MAP — stays mounted once nav is visited */}
           {navVisited && (
             <div

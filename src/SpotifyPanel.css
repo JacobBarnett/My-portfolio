@@ -827,3 +827,32 @@
   accent-color: var(--green);
   cursor: pointer;
 }
+/* Day mode */
+.sp-day,
+.sp-day .sp-sidebar,
+.sp-day .sp-main,
+.sp-day .sp-bar {
+  background: #f0f2f5;
+  color: #0d0d0f;
+  border-color: rgba(0, 0, 0, 0.08);
+}
+.sp-day .sp-lib-item:hover,
+.sp-day .sp-track:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+.sp-day .sp-topbar,
+.sp-day .sp-bar {
+  background: #e8eaed;
+  border-color: rgba(0, 0, 0, 0.08);
+}
+.sp-day .sp-topbar-input {
+  background: #fff;
+  color: #0d0d0f;
+}
+.sp-day .sp-card,
+.sp-day .sp-recent-item {
+  background: #fff;
+}
+.sp-day .sp-track-name {
+  color: #0d0d0f !important;
+}

@@ -21,7 +21,7 @@ async function spotifyFetch(endpoint, options = {}) {
   }
 }
 
-export default function SpotifyPanel({ onDisconnect }) {
+export default function SpotifyPanel({ onDisconnect, dayMode = false }) {
   const [view, setView] = useState("home");
   const [playlists, setPlaylists] = useState([]);
   const [likedSongs, setLikedSongs] = useState([]);
@@ -350,7 +350,7 @@ export default function SpotifyPanel({ onDisconnect }) {
   };
 
   return (
-    <div className="sp-root">
+    <div className={`sp-root${dayMode ? " sp-day" : ""}`}>
       {/* SIDEBAR */}
       <div className="sp-sidebar">
         <div className="sp-lib-top">
