@@ -856,3 +856,34 @@
 .sp-day .sp-track-name {
   color: #0d0d0f !important;
 }
+/* Day mode text overrides */
+.sp-day .sp-greeting,
+.sp-day .sp-section-title,
+.sp-day .sp-card-name,
+.sp-day .sp-card-meta,
+.sp-day .sp-recent-name,
+.sp-day .sp-lib-item-name,
+.sp-day .sp-lib-item-sub,
+.sp-day .sp-lib-title,
+.sp-day .sp-track-name,
+.sp-day .sp-track-artist,
+.sp-day .sp-track-album,
+.sp-day .sp-track-duration,
+.sp-day .sp-track-num,
+.sp-day .sp-th-title,
+.sp-day .sp-th-album,
+.sp-day .sp-hero-title,
+.sp-day .sp-hero-label,
+.sp-day .sp-hero-desc,
+.sp-day .sp-hero-meta,
+.sp-day .sp-bar-title,
+.sp-day .sp-bar-artist,
+.sp-day .sp-bar-time,
+.sp-day .sp-topbar-input,
+.sp-day .sp-topbar-input::placeholder {
+  color: #0d0d0f !important;
+}
+
+.sp-day .sp-topbar-input::placeholder {
+  color: #6b7280 !important;
+}
