@@ -132,7 +132,17 @@ function FleetMap({ vehicles, selectedId, onSelect }) {
   const mapInstanceRef = useRef(null);
   const markersRef = useRef({});
   const initialized = useRef(false);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const onSelectRef = useRef(onSelect);
+  const selectedIdRef = useRef(selectedId);
+
+  useEffect(() => {
+    onSelectRef.current = onSelect;
+  }, [onSelect]);
+  useEffect(() => {
+    selectedIdRef.current = selectedId;
+  }, [selectedId]);
+
+  // Init map once
   useEffect(() => {
     if (!document.getElementById("leaflet-css-rt")) {
       const link = document.createElement("link");
@@ -156,26 +166,18 @@ function FleetMap({ vehicles, selectedId, onSelect }) {
     load().then((L) => {
       if (initialized.current || !mapRef.current) return;
       initialized.current = true;
-
       const map = L.map(mapRef.current, {
         center: [34.02, -118.35],
         zoom: 11,
         zoomControl: false,
         attributionControl: false,
       });
-
       L.tileLayer(
         "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-        {
-          maxZoom: 19,
-        },
+        { maxZoom: 19 },
       ).addTo(map);
-
       L.control.zoom({ position: "bottomright" }).addTo(map);
       mapInstanceRef.current = map;
-
-      // Initial markers
-      vehicles.forEach((v) => createMarker(L, map, v));
     });
 
     return () => {
@@ -185,37 +187,15 @@ function FleetMap({ vehicles, selectedId, onSelect }) {
         initialized.current = false;
       }
     };
-  }, []);
+  }, []); // intentionally empty — init once only
 
-  const createMarker = (L, map, v) => {
-    const color = statusColor(v.status);
-    const isSelected = v.id === selectedId;
-    const html = `
-      <div class="rt-marker ${isSelected ? "rt-marker--selected" : ""}" style="--mc:${color}">
-        <div class="rt-marker-dot"></div>
-        ${v.status === "en_route" ? '<div class="rt-marker-pulse"></div>' : ""}
-        <div class="rt-marker-label">${v.id}</div>
-      </div>`;
-    const icon = L.divIcon({
-      className: "",
-      html,
-      iconSize: [40, 40],
-      iconAnchor: [20, 20],
-    });
-    const marker = L.marker([v.lat, v.lng], { icon })
-      .addTo(map)
-      .on("click", () => onSelect(v.id));
-    markersRef.current[v.id] = marker;
-  };
-
-  // Update marker positions & styles
+  // Update markers whenever vehicles or selectedId changes
   useEffect(() => {
     const L = window.L;
     const map = mapInstanceRef.current;
     if (!L || !map) return;
 
     vehicles.forEach((v) => {
-      const marker = markersRef.current[v.id];
       const color = statusColor(v.status);
       const isSelected = v.id === selectedId;
       const html = `
@@ -230,17 +210,20 @@ function FleetMap({ vehicles, selectedId, onSelect }) {
         iconSize: [40, 40],
         iconAnchor: [20, 20],
       });
-
-      if (marker) {
-        marker.setLatLng([v.lat, v.lng]);
-        marker.setIcon(icon);
+      const existing = markersRef.current[v.id];
+      if (existing) {
+        existing.setLatLng([v.lat, v.lng]);
+        existing.setIcon(icon);
       } else {
-        createMarker(L, map, v);
+        const marker = L.marker([v.lat, v.lng], { icon })
+          .addTo(map)
+          .on("click", () => onSelectRef.current(v.id));
+        markersRef.current[v.id] = marker;
       }
     });
   }, [vehicles, selectedId]);
-  // Pan to selected
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+
+  // Pan to selected vehicle
   useEffect(() => {
     if (!selectedId || !mapInstanceRef.current) return;
     const v = vehicles.find((x) => x.id === selectedId);
@@ -249,7 +232,7 @@ function FleetMap({ vehicles, selectedId, onSelect }) {
         animate: true,
         duration: 0.5,
       });
-  }, [selectedId]);
+  }, [selectedId, vehicles]);
 
   return <div ref={mapRef} className="rt-map" />;
 }
@@ -259,7 +242,6 @@ export default function RoboTaxi() {
   const [vehicles, setVehicles] = useState(initVehicles);
   const [selectedId, setSelectedId] = useState(null);
   const [filter, setFilter] = useState("all");
-  const [tick, setTick] = useState(0);
   const [alerts, setAlerts] = useState([]);
 
   const selected = vehicles.find((v) => v.id === selectedId);
@@ -284,7 +266,6 @@ export default function RoboTaxi() {
           } = v;
 
           if (status === "en_route") {
-            // Move vehicle
             const rad = (heading * Math.PI) / 180;
             const dist = speed * 0.000005;
             lat = clamp(
@@ -297,15 +278,11 @@ export default function RoboTaxi() {
               LA_BOUNDS.minLng,
               LA_BOUNDS.maxLng,
             );
-            // Slight heading drift
             heading = (heading + rand(-8, 8) + 360) % 360;
-            // Drain battery slowly
             battery = Math.max(0, battery - 0.08);
             mileage += speed * 0.0003;
             eta = Math.max(0, eta - 0.05);
             speed = clamp(speed + rand(-3, 3), 18, 65);
-
-            // Trip ends
             if (eta <= 0 || battery < 8) {
               status = battery < 8 ? "charging" : "available";
               passenger = null;
@@ -315,7 +292,6 @@ export default function RoboTaxi() {
               tripCount += 1;
             }
           } else if (status === "available") {
-            // Occasionally pick up passenger
             if (Math.random() < 0.04) {
               status = "en_route";
               passenger = randomPassenger();
@@ -345,15 +321,11 @@ export default function RoboTaxi() {
           };
         }),
       );
-
-      setTick((t) => t + 1);
     }, 2000);
-
     return () => clearInterval(interval);
   }, []);
 
-  // Low battery alerts
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+  // Low battery alerts — depends only on vehicles
   useEffect(() => {
     vehicles.forEach((v) => {
       if (v.battery < 15 && v.status === "en_route") {
@@ -370,7 +342,7 @@ export default function RoboTaxi() {
         });
       }
     });
-  }, [tick]);
+  }, [vehicles]);
 
   const filtered = vehicles.filter(
     (v) => filter === "all" || v.status === filter,
