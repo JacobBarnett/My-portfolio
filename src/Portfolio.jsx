@@ -216,16 +216,28 @@ export default function Portfolio() {
               </div>
             </div>
 
-            {/* Placeholder 02 */}
+            {/* RoboTaxi Fleet Monitor */}
             <div className="project-card reveal">
               <div className="project-number">02</div>
-              <div className="project-tag">Coming Soon</div>
-              <h3 className="project-title">Next Project</h3>
+              <div className="project-tag">
+                React · Leaflet · Real-Time Simulation
+              </div>
+              <h3 className="project-title">RoboTaxi Fleet Monitor</h3>
               <p className="project-desc">
-                Currently in development. Check back soon or visit my GitHub to
-                see what I'm working on.
+                A live operations dashboard for a simulated fleet of 20
+                autonomous Tesla Cybercabs across Los Angeles. Track vehicles in
+                real time, monitor passengers, battery levels, and dispatch
+                status — all updated live on an interactive map.
               </p>
               <div className="project-links">
+                <a
+                  href="/robotaxi"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="project-link project-link--primary"
+                >
+                  Launch App →
+                </a>
                 <a
                   href="https://github.com/JacobBarnett"
                   target="_blank"
