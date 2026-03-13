@@ -239,8 +239,8 @@ function FleetMap({ vehicles, selectedId, onSelect }) {
       }
     });
   }, [vehicles, selectedId]);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   // Pan to selected
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!selectedId || !mapInstanceRef.current) return;
     const v = vehicles.find((x) => x.id === selectedId);
@@ -352,8 +352,8 @@ export default function RoboTaxi() {
     return () => clearInterval(interval);
   }, []);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   // Low battery alerts
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     vehicles.forEach((v) => {
       if (v.battery < 15 && v.status === "en_route") {
