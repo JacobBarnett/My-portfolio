@@ -14,7 +14,7 @@
   color: var(--text);
   font-family: "Rajdhani", sans-serif;
   overflow: hidden;
-  font-size: 14px;
+  font-size: 16px;
 }
 
 /* ── SIDEBAR ── */
@@ -33,7 +33,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 0.9rem;
+  font-size: 1rem;
   font-weight: 700;
   color: var(--muted);
   cursor: default;
@@ -54,7 +54,7 @@
   color: var(--text);
   border-radius: 20px;
   padding: 4px 12px;
-  font-size: 0.78rem;
+  font-size: 0.88rem;
   cursor: pointer;
   font-family: inherit;
   transition: background 0.15s;
@@ -129,7 +129,7 @@
   min-width: 0;
 }
 .sp-lib-item-name {
-  font-size: 0.85rem;
+  font-size: 0.95rem;
   font-weight: 600;
   color: var(--text);
   white-space: nowrap;
@@ -137,7 +137,7 @@
   text-overflow: ellipsis;
 }
 .sp-lib-item-sub {
-  font-size: 0.72rem;
+  font-size: 0.82rem;
   color: var(--muted);
   white-space: nowrap;
   overflow: hidden;
@@ -151,7 +151,7 @@
   background: transparent;
   border: none;
   color: var(--muted);
-  font-size: 0.78rem;
+  font-size: 0.88rem;
   cursor: pointer;
   padding: 8px;
   margin: 4px 0;
@@ -224,7 +224,7 @@
   background: transparent;
   border: none;
   color: #000;
-  font-size: 0.85rem;
+  font-size: 0.95rem;
   font-family: inherit;
   outline: none;
   font-weight: 600;
@@ -237,7 +237,7 @@
   border: none;
   color: #555;
   cursor: pointer;
-  font-size: 0.8rem;
+  font-size: 0.9rem;
   padding: 0;
 }
 
@@ -256,7 +256,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.8rem;
+  font-size: 0.9rem;
   font-weight: 700;
   color: var(--text);
 }
@@ -280,7 +280,7 @@
 
 /* HOME */
 .sp-greeting {
-  font-size: 1.6rem;
+  font-size: 1.9rem;
   font-weight: 700;
   margin: 0 0 16px;
 }
@@ -334,7 +334,7 @@
 }
 .sp-recent-name {
   flex: 1;
-  font-size: 0.82rem;
+  font-size: 0.92rem;
   font-weight: 700;
   color: var(--text);
   padding: 0 12px;
@@ -363,7 +363,7 @@
 }
 
 .sp-section-title {
-  font-size: 1.2rem;
+  font-size: 1.35rem;
   font-weight: 700;
   margin: 0 0 12px;
 }
@@ -408,7 +408,7 @@
   justify-content: center;
 }
 .sp-card-name {
-  font-size: 0.85rem;
+  font-size: 0.95rem;
   font-weight: 700;
   color: var(--text);
   white-space: nowrap;
@@ -417,21 +417,21 @@
   margin-bottom: 4px;
 }
 .sp-card-meta {
-  font-size: 0.75rem;
+  font-size: 0.85rem;
   color: var(--muted);
 }
 
-/* HERO */
+/* HERO — no dark gradient */
 .sp-hero {
   display: flex;
   align-items: flex-end;
   gap: 20px;
   padding: 24px 16px 16px;
-  background: linear-gradient(180deg, #2a2a4a 0%, var(--bg) 100%);
+  background: transparent;
   margin: -16px -16px 0;
 }
 .sp-hero--liked {
-  background: linear-gradient(180deg, #450af5 0%, var(--bg) 100%);
+  background: transparent;
 }
 .sp-hero-img {
   width: 180px;
@@ -457,25 +457,25 @@
   padding-bottom: 16px;
 }
 .sp-hero-label {
-  font-size: 0.72rem;
+  font-size: 0.82rem;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
   margin-bottom: 8px;
 }
 .sp-hero-title {
-  font-size: 2rem;
+  font-size: 2.2rem;
   font-weight: 900;
   margin-bottom: 8px;
   line-height: 1.1;
 }
 .sp-hero-desc {
-  font-size: 0.8rem;
+  font-size: 0.92rem;
   color: var(--muted);
   margin-bottom: 6px;
 }
 .sp-hero-meta {
-  font-size: 0.8rem;
+  font-size: 0.92rem;
   color: var(--muted);
 }
 
@@ -527,7 +527,7 @@
   padding: 0 8px 8px;
   border-bottom: 1px solid #282828;
   color: var(--muted);
-  font-size: 0.72rem;
+  font-size: 0.82rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   margin-bottom: 4px;
@@ -577,12 +577,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.82rem;
+  font-size: 0.92rem;
   color: var(--muted);
 }
 .sp-eq-icon {
   color: var(--green);
-  font-size: 0.9rem;
+  font-size: 1rem;
 }
 .sp-track-img {
   width: 36px;
@@ -596,7 +596,7 @@
   text-align: left;
 }
 .sp-track-name {
-  font-size: 0.85rem;
+  font-size: 0.95rem;
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
@@ -604,14 +604,14 @@
   margin-bottom: 2px;
 }
 .sp-track-artist {
-  font-size: 0.75rem;
+  font-size: 0.85rem;
   color: var(--muted);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .sp-track-album {
-  font-size: 0.78rem;
+  font-size: 0.88rem;
   color: var(--muted);
   white-space: nowrap;
   overflow: hidden;
@@ -619,7 +619,7 @@
   text-align: left;
 }
 .sp-track-duration {
-  font-size: 0.78rem;
+  font-size: 0.88rem;
   color: var(--muted);
   text-align: right;
   font-family: "Share Tech Mono", monospace;
@@ -652,7 +652,7 @@
   padding: 60px 20px;
   gap: 12px;
   color: var(--muted);
-  font-size: 0.9rem;
+  font-size: 1rem;
 }
 
 /* ── NOW PLAYING BAR ── */
@@ -685,7 +685,7 @@
   min-width: 0;
 }
 .sp-bar-title {
-  font-size: 0.82rem;
+  font-size: 0.95rem;
   font-weight: 600;
   white-space: nowrap;
   overflow: hidden;
@@ -693,7 +693,7 @@
   color: var(--text);
 }
 .sp-bar-artist {
-  font-size: 0.72rem;
+  font-size: 0.82rem;
   color: var(--muted);
   white-space: nowrap;
   overflow: hidden;
@@ -770,7 +770,7 @@
 }
 .sp-bar-time {
   font-family: "Share Tech Mono", monospace;
-  font-size: 0.65rem;
+  font-size: 0.75rem;
   color: var(--muted);
   flex-shrink: 0;
   width: 32px;
@@ -827,7 +827,8 @@
   accent-color: var(--green);
   cursor: pointer;
 }
-/* Day mode */
+
+/* ── DAY MODE ── */
 .sp-day,
 .sp-day .sp-sidebar,
 .sp-day .sp-main,
@@ -856,7 +857,6 @@
 .sp-day .sp-track-name {
   color: #0d0d0f !important;
 }
-/* Day mode text overrides */
 .sp-day .sp-greeting,
 .sp-day .sp-section-title,
 .sp-day .sp-card-name,
@@ -883,7 +883,6 @@
 .sp-day .sp-topbar-input::placeholder {
   color: #0d0d0f !important;
 }
-
 .sp-day .sp-topbar-input::placeholder {
   color: #6b7280 !important;
 }
