@@ -2,6 +2,7 @@
 
 /* ── VARIABLES ── */
 .tesla-wrapper {
+  font-size: 112%;
   --bg: #0d0d0f;
   --surface: #111114;
   --surface2: #18181c;
