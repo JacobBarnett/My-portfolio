@@ -565,8 +565,23 @@ export default function TeslaUI() {
               </button>
             </div>
           </div>
-        </div>
 
+          {token && nowPlaying && (
+            <div className="left-now-playing">
+              <img
+                src={nowPlaying.album?.images?.[1]?.url}
+                alt="album"
+                className="left-album-art"
+              />
+              <div className="left-track-info">
+                <div className="left-track-name">{nowPlaying.name}</div>
+                <div className="left-track-artist">
+                  {nowPlaying.artists?.[0]?.name}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
         {/* CENTER PANEL */}
         <div className="tesla-center">
           <div className="center-tabs">
