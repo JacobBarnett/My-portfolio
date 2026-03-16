@@ -27,7 +27,6 @@ function generateCodeVerifier() {
     .replace(/\//g, "_")
     .replace(/=/g, "");
 }
-
 async function generateCodeChallenge(verifier) {
   const data = new TextEncoder().encode(verifier);
   const digest = await window.crypto.subtle.digest("SHA-256", data);
@@ -36,7 +35,6 @@ async function generateCodeChallenge(verifier) {
     .replace(/\//g, "_")
     .replace(/=/g, "");
 }
-
 async function loginWithSpotify() {
   const verifier = generateCodeVerifier();
   const challenge = await generateCodeChallenge(verifier);
@@ -52,7 +50,6 @@ async function loginWithSpotify() {
   });
   window.location.href = `https://accounts.spotify.com/authorize?${params}`;
 }
-
 async function exchangeToken(code) {
   const verifier = localStorage.getItem("spotify_verifier");
   if (!verifier) return null;
@@ -79,8 +76,6 @@ async function exchangeToken(code) {
   }
   return null;
 }
-
-// ── SPOTIFY FETCH — reads token directly, no refresh attempt ──
 async function spotifyFetch(endpoint, options = {}) {
   const token = localStorage.getItem("spotify_token");
   if (!token) return null;
@@ -115,19 +110,104 @@ function waitForSize(el, maxMs = 3000) {
   return new Promise((resolve, reject) => {
     const start = Date.now();
     const check = () => {
-      if (el && el.clientWidth > 0 && el.clientHeight > 0) {
-        resolve();
-      } else if (Date.now() - start > maxMs) {
-        reject(new Error("map container never got a size"));
-      } else {
-        requestAnimationFrame(check);
-      }
+      if (el && el.clientWidth > 0 && el.clientHeight > 0) resolve();
+      else if (Date.now() - start > maxMs) reject(new Error("no size"));
+      else requestAnimationFrame(check);
     };
     check();
   });
 }
 
-// ── MAP COMPONENT ──
+// ── SHARED MAP FACTORY ──
+function createLeafletMap(container, opts = {}) {
+  const L = window.L;
+  const map = L.map(container, {
+    center: [33.8868, -117.8878],
+    zoom: opts.zoom || 13,
+    zoomControl: opts.zoomControl !== undefined ? opts.zoomControl : false,
+    attributionControl: false,
+    zoomAnimation: false,
+    fadeAnimation: false,
+    dragging: opts.dragging !== undefined ? opts.dragging : true,
+    scrollWheelZoom:
+      opts.scrollWheelZoom !== undefined ? opts.scrollWheelZoom : true,
+  });
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+    maxZoom: 19,
+  }).addTo(map);
+  const icon = L.divIcon({
+    className: "",
+    html: '<div style="width:12px;height:12px;background:#e82127;border-radius:50%;border:2px solid #fff;box-shadow:0 0 8px rgba(232,33,39,0.8);"></div>',
+    iconSize: [12, 12],
+    iconAnchor: [6, 6],
+  });
+  L.marker([33.8868, -117.8878], { icon }).addTo(map);
+  return map;
+}
+
+// ── MINI MAP (home panel) ──
+function MiniMap({ dayMode }) {
+  const mapRef = useRef(null);
+  const mapInstanceRef = useRef(null);
+  const initialized = useRef(false);
+
+  useEffect(() => {
+    if (!document.getElementById("leaflet-css")) {
+      const link = document.createElement("link");
+      link.id = "leaflet-css";
+      link.rel = "stylesheet";
+      link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+      document.head.appendChild(link);
+    }
+    const load = () =>
+      new Promise((resolve) => {
+        if (window.L) {
+          resolve(window.L);
+          return;
+        }
+        const s = document.createElement("script");
+        s.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+        s.onload = () => resolve(window.L);
+        document.body.appendChild(s);
+      });
+    load().then(async () => {
+      if (initialized.current || !mapRef.current) return;
+      try {
+        await waitForSize(mapRef.current);
+      } catch {
+        return;
+      }
+      initialized.current = true;
+      mapInstanceRef.current = createLeafletMap(mapRef.current, {
+        zoom: 12,
+        zoomControl: false,
+        dragging: false,
+        scrollWheelZoom: false,
+      });
+    });
+    return () => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.remove();
+        mapInstanceRef.current = null;
+        initialized.current = false;
+      }
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!mapRef.current) return;
+    if (dayMode) {
+      mapRef.current.style.filter =
+        "invert(0.88) hue-rotate(180deg) brightness(1.05)";
+    } else {
+      mapRef.current.style.filter = "none";
+    }
+  }, [dayMode]);
+
+  return <div ref={mapRef} className="home-mini-map" />;
+}
+
+// ── NAV MAP ──
 function NavMap({ destination, activePanel }) {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -142,51 +222,29 @@ function NavMap({ destination, activePanel }) {
       link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
       document.head.appendChild(link);
     }
-
-    const loadLeaflet = () =>
+    const load = () =>
       new Promise((resolve) => {
         if (window.L) {
           resolve(window.L);
           return;
         }
-        const script = document.createElement("script");
-        script.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
-        script.onload = () => resolve(window.L);
-        document.body.appendChild(script);
+        const s = document.createElement("script");
+        s.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+        s.onload = () => resolve(window.L);
+        document.body.appendChild(s);
       });
-
-    loadLeaflet().then(async (L) => {
+    load().then(async (L) => {
       if (mapInstanceRef.current || !mapRef.current) return;
       try {
         await waitForSize(mapRef.current);
       } catch {
         return;
       }
-
-      const map = L.map(mapRef.current, {
-        center: [33.8868, -117.8878],
+      mapInstanceRef.current = createLeafletMap(mapRef.current, {
         zoom: 13,
         zoomControl: true,
-        attributionControl: false,
-        zoomAnimation: false,
-        fadeAnimation: false,
       });
-
-      L.tileLayer(
-        "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-        { maxZoom: 19 },
-      ).addTo(map);
-
-      const icon = L.divIcon({
-        className: "",
-        html: '<div style="width:14px;height:14px;background:#e82127;border-radius:50%;border:2px solid #fff;box-shadow:0 0 10px rgba(232,33,39,0.8);"></div>',
-        iconSize: [14, 14],
-        iconAnchor: [7, 7],
-      });
-      L.marker([33.8868, -117.8878], { icon }).addTo(map);
-      mapInstanceRef.current = map;
     });
-
     return () => {
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
@@ -197,11 +255,11 @@ function NavMap({ destination, activePanel }) {
 
   useEffect(() => {
     if (activePanel !== "nav" || !mapInstanceRef.current) return;
-    requestAnimationFrame(() => {
+    requestAnimationFrame(() =>
       requestAnimationFrame(() => {
         if (mapInstanceRef.current) mapInstanceRef.current.invalidateSize();
-      });
-    });
+      }),
+    );
   }, [activePanel]);
 
   useEffect(() => {
@@ -218,11 +276,9 @@ function NavMap({ destination, activePanel }) {
       }
       const L = window.L;
       if (!L || !mapInstanceRef.current) return;
-
       mapInstanceRef.current.invalidateSize();
       await new Promise((r) => requestAnimationFrame(r));
       await new Promise((r) => requestAnimationFrame(r));
-
       let results;
       try {
         const r = await fetch(
@@ -232,28 +288,23 @@ function NavMap({ destination, activePanel }) {
       } catch {
         return;
       }
-
       if (!results.length || !mapInstanceRef.current) return;
       const { lat, lon, display_name } = results[0];
       const destLatLng = [parseFloat(lat), parseFloat(lon)];
-
       if (markerRef.current)
         mapInstanceRef.current.removeLayer(markerRef.current);
       if (routeLayerRef.current)
         mapInstanceRef.current.removeLayer(routeLayerRef.current);
-
       const destIcon = L.divIcon({
         className: "",
         html: '<div style="width:14px;height:14px;background:#3a7bd5;border-radius:50%;border:2px solid #fff;box-shadow:0 0 10px rgba(58,123,213,0.8);"></div>',
         iconSize: [14, 14],
         iconAnchor: [7, 7],
       });
-
       markerRef.current = L.marker(destLatLng, { icon: destIcon })
         .addTo(mapInstanceRef.current)
         .bindPopup(display_name.split(",").slice(0, 2).join(","))
         .openPopup();
-
       mapInstanceRef.current.invalidateSize();
       const midLat = (33.8868 + destLatLng[0]) / 2;
       const midLng = (-117.8878 + destLatLng[1]) / 2;
@@ -263,6 +314,43 @@ function NavMap({ destination, activePanel }) {
   }, [destination]);
 
   return <div ref={mapRef} className="leaflet-map" />;
+}
+
+// ── PERSISTENT MUSIC BAR ──
+function MusicBar({
+  nowPlaying,
+  isPlaying,
+  onPlayPause,
+  onPrev,
+  onNext,
+  onOpenMusic,
+  token,
+}) {
+  if (!token || !nowPlaying) return null;
+  return (
+    <div className="music-bar" onClick={onOpenMusic}>
+      <img
+        src={nowPlaying.album?.images?.[2]?.url}
+        alt="album"
+        className="music-bar-art"
+      />
+      <div className="music-bar-info">
+        <div className="music-bar-title">{nowPlaying.name}</div>
+        <div className="music-bar-artist">{nowPlaying.artists?.[0]?.name}</div>
+      </div>
+      <div className="music-bar-controls" onClick={(e) => e.stopPropagation()}>
+        <button onClick={onPrev} className="music-bar-btn">
+          ⏮
+        </button>
+        <button onClick={onPlayPause} className="music-bar-btn music-bar-play">
+          {isPlaying ? "⏸" : "▶"}
+        </button>
+        <button onClick={onNext} className="music-bar-btn">
+          ⏭
+        </button>
+      </div>
+    </div>
+  );
 }
 
 // ── MAIN COMPONENT ──
@@ -285,7 +373,7 @@ export default function TeslaUI() {
   const [navHistory, setNavHistory] = useState([]);
   const [navVisited, setNavVisited] = useState(false);
 
-  // ── Handle Spotify OAuth callback ──
+  // ── OAuth callback ──
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const code = params.get("code");
@@ -315,7 +403,7 @@ export default function TeslaUI() {
     }
   }, []);
 
-  // ── Token expiry check — silently log out instead of attempting refresh ──
+  // ── Token expiry ──
   useEffect(() => {
     const interval = setInterval(() => {
       const expiry = localStorage.getItem("spotify_expires");
@@ -363,14 +451,12 @@ export default function TeslaUI() {
     await spotifyFetch("/me/player/previous", { method: "POST" });
     setTimeout(fetchNowPlaying, 900);
   };
-
   const logout = () => {
     localStorage.removeItem("spotify_token");
     localStorage.removeItem("spotify_expires");
     setToken(null);
     setNowPlaying(null);
   };
-
   const handleNavGo = () => {
     if (!navInput.trim()) return;
     setDestination(navInput.trim());
@@ -550,32 +636,23 @@ export default function TeslaUI() {
                   <div className="hc-sub">{brightness}%</div>
                 </div>
               </div>
-              {token && nowPlaying && (
-                <div className="mini-player">
-                  <img
-                    src={nowPlaying.album?.images?.[2]?.url}
-                    alt="album"
-                    className="mini-art"
-                  />
-                  <div className="mini-info">
-                    <div className="mini-title">{nowPlaying.name}</div>
-                    <div className="mini-artist">
-                      {nowPlaying.artists?.[0]?.name}
-                    </div>
-                  </div>
-                  <div className="mini-controls">
-                    <button onClick={handlePrev} className="mini-btn">
-                      ⏮
-                    </button>
-                    <button onClick={handlePlayPause} className="mini-btn play">
-                      {isPlaying ? "⏸" : "▶"}
-                    </button>
-                    <button onClick={handleNext} className="mini-btn">
-                      ⏭
-                    </button>
-                  </div>
+
+              {/* MINI MAP on home */}
+              <div className="home-map-section">
+                <div className="home-map-header">
+                  <span className="home-map-label">📍 Anaheim, CA</span>
+                  <button
+                    className="home-map-nav-btn"
+                    onClick={() => {
+                      setActivePanel("nav");
+                      setNavVisited(true);
+                    }}
+                  >
+                    Navigate →
+                  </button>
                 </div>
-              )}
+                <MiniMap dayMode={dayMode} />
+              </div>
             </div>
           )}
 
@@ -692,7 +769,7 @@ export default function TeslaUI() {
             </div>
           )}
 
-          {/* NAV MAP — stays mounted once nav is visited */}
+          {/* NAV MAP */}
           {navVisited && (
             <div
               style={{
@@ -700,12 +777,23 @@ export default function TeslaUI() {
                 flexDirection: "column",
                 overflow: "hidden",
                 padding: "0 1rem 1rem",
-                height: "620px",
+                height: "540px",
               }}
             >
               <NavMap destination={destination} activePanel={activePanel} />
             </div>
           )}
+
+          {/* PERSISTENT MUSIC BAR */}
+          <MusicBar
+            nowPlaying={nowPlaying}
+            isPlaying={isPlaying}
+            onPlayPause={handlePlayPause}
+            onPrev={handlePrev}
+            onNext={handleNext}
+            onOpenMusic={() => setActivePanel("music")}
+            token={token}
+          />
         </div>
 
         {/* RIGHT PANEL */}
