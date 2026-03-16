@@ -99,7 +99,7 @@
   background: var(--surface2);
 }
 .sp-lib-item.active {
-  background: var(--surface2);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .sp-lib-thumb {
@@ -849,6 +849,9 @@
 .sp-day .sp-topbar-input {
   background: #fff;
   color: #0d0d0f;
+}
+.sp-day .sp-lib-item.active {
+  background: rgba(0, 0, 0, 0.06);
 }
 .sp-day .sp-card,
 .sp-day .sp-recent-item {
