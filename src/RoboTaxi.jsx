@@ -3,26 +3,26 @@ import "./RoboTaxi.css";
 
 // ── LA waypoints (real intersections) ──
 const LA_WAYPOINTS = [
-  [34.0522, -118.2437],
-  [34.0195, -118.4912],
-  [34.0928, -118.3287],
-  [34.0211, -118.3965],
-  [34.0736, -118.4004],
-  [34.0259, -118.2948],
-  [34.0674, -118.3003],
-  [34.043, -118.2673],
-  [33.9731, -118.2487],
-  [34.1478, -118.1445],
-  [34.1425, -118.2551],
-  [34.0522, -118.4437],
-  [33.9561, -118.3949],
-  [34.0017, -118.4953],
-  [34.0817, -118.372],
-  [34.0058, -118.4965],
-  [34.0368, -118.2673],
-  [34.0831, -118.3666],
-  [34.001, -118.286],
-  [34.1161, -118.3003],
+  [34.0522, -118.2437], // Downtown LA
+  [34.0736, -118.4004], // West Hollywood
+  [34.0195, -118.4912], // Santa Monica
+  [34.0928, -118.3287], // Los Feliz
+  [34.043, -118.2673], // East LA
+  [34.0259, -118.2948], // Boyle Heights
+  [34.0674, -118.3003], // Koreatown
+  [34.1425, -118.2551], // Glendale
+  [34.1478, -118.1445], // Pasadena
+  [34.0817, -118.372], // Hollywood
+  [34.0058, -118.4965], // Culver City
+  [33.9425, -118.4081], // Inglewood
+  [34.1161, -118.3003], // Burbank
+  [34.0522, -118.3287], // Mid-Wilshire
+  [34.0831, -118.3666], // Silver Lake
+  [34.0368, -118.2673], // Lincoln Heights
+  [34.001, -118.286], // South LA
+  [34.026, -118.3965], // Palms
+  [34.1583, -118.3085], // North Hollywood
+  [34.0272, -118.4695], // Venice (inland on Lincoln Blvd)
 ];
 
 const rand = (min, max) => Math.random() * (max - min) + min;
@@ -146,14 +146,17 @@ async function reverseGeocode(lat, lng) {
   try {
     const res = await fetch(
       `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=17&addressdetails=1`,
+      { headers: { "Accept-Language": "en" } },
     );
     const data = await res.json();
+    if (data.error) return "Locating...";
     const addr = data.address;
     const street =
       addr?.road ||
       addr?.pedestrian ||
       addr?.path ||
       addr?.neighbourhood ||
+      addr?.suburb ||
       "Unknown Street";
     const area =
       addr?.suburb ||
@@ -163,7 +166,7 @@ async function reverseGeocode(lat, lng) {
       "";
     return area ? `${street}, ${area}` : street;
   } catch {
-    return "Unknown Street";
+    return "Locating...";
   }
 }
 
@@ -338,15 +341,20 @@ export default function RoboTaxi() {
     const id = selected.id;
     const lat = selected.lat;
     const lng = selected.lng;
-    reverseGeocode(lat, lng).then((street) => {
-      if (!cancelled) {
-        setVehicles((prev) =>
-          prev.map((v) => (v.id === id ? { ...v, currentStreet: street } : v)),
-        );
-      }
-    });
+    const timer = setTimeout(() => {
+      reverseGeocode(lat, lng).then((street) => {
+        if (!cancelled) {
+          setVehicles((prev) =>
+            prev.map((v) =>
+              v.id === id ? { ...v, currentStreet: street } : v,
+            ),
+          );
+        }
+      });
+    }, 500);
     return () => {
       cancelled = true;
+      clearTimeout(timer);
     };
   }, [selected]); // eslint-disable-line react-hooks/exhaustive-deps
 
