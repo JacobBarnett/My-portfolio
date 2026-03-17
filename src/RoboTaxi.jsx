@@ -1,17 +1,32 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import "./RoboTaxi.css";
 
-// ── LA bounding box ──
-const LA_BOUNDS = {
-  minLat: 33.85,
-  maxLat: 34.15,
-  minLng: -118.55,
-  maxLng: -118.15,
-};
+// ── LA waypoints (real intersections) ──
+const LA_WAYPOINTS = [
+  [34.0522, -118.2437],
+  [34.0195, -118.4912],
+  [34.0928, -118.3287],
+  [34.0211, -118.3965],
+  [34.0736, -118.4004],
+  [34.0259, -118.2948],
+  [34.0674, -118.3003],
+  [34.043, -118.2673],
+  [33.9731, -118.2487],
+  [34.1478, -118.1445],
+  [34.1425, -118.2551],
+  [34.0522, -118.4437],
+  [33.9561, -118.3949],
+  [34.0017, -118.4953],
+  [34.0817, -118.372],
+  [34.0058, -118.4965],
+  [34.0368, -118.2673],
+  [34.0831, -118.3666],
+  [34.001, -118.286],
+  [34.1161, -118.3003],
+];
 
 const rand = (min, max) => Math.random() * (max - min) + min;
 const randInt = (min, max) => Math.floor(rand(min, max));
-const clamp = (v, min, max) => Math.min(Math.max(v, min), max);
 
 const FIRST_NAMES = [
   "Ava",
@@ -83,29 +98,11 @@ const NEIGHBORHOODS = [
 function randomPassenger() {
   return `${FIRST_NAMES[randInt(0, FIRST_NAMES.length)]} ${LAST_NAMES[randInt(0, LAST_NAMES.length)]}`;
 }
-
-function randomDestination() {
-  return NEIGHBORHOODS[randInt(0, NEIGHBORHOODS.length)];
+function randomWaypoint() {
+  return LA_WAYPOINTS[randInt(0, LA_WAYPOINTS.length)];
 }
-
-function initVehicles() {
-  return Array.from({ length: 20 }, (_, i) => {
-    const status = ["en_route", "available", "charging"][randInt(0, 3)];
-    return {
-      id: `CX-${String(i + 1).padStart(3, "0")}`,
-      lat: rand(LA_BOUNDS.minLat, LA_BOUNDS.maxLat),
-      lng: rand(LA_BOUNDS.minLng, LA_BOUNDS.maxLng),
-      battery: randInt(15, 100),
-      speed: status === "en_route" ? randInt(18, 65) : 0,
-      status,
-      passenger: status === "en_route" ? randomPassenger() : null,
-      destination: status === "en_route" ? randomDestination() : null,
-      eta: status === "en_route" ? randInt(3, 28) : null,
-      heading: rand(0, 360),
-      tripCount: randInt(0, 12),
-      mileage: randInt(0, 280),
-    };
-  });
+function randomDestName() {
+  return NEIGHBORHOODS[randInt(0, NEIGHBORHOODS.length)];
 }
 
 function statusColor(status) {
@@ -113,36 +110,99 @@ function statusColor(status) {
   if (status === "available") return "#22c55e";
   return "#f59e0b";
 }
-
 function statusLabel(status) {
   if (status === "en_route") return "En Route";
   if (status === "available") return "Available";
   return "Charging";
 }
-
 function batteryColor(pct) {
   if (pct > 50) return "#22c55e";
   if (pct > 20) return "#f59e0b";
   return "#ef4444";
 }
 
+// Fetch a real route from OSRM
+async function fetchRoute(from, to) {
+  try {
+    const url = `https://router.project-osrm.org/route/v1/driving/${from[1]},${from[0]};${to[1]},${to[0]}?overview=full&geometries=geojson&steps=false`;
+    const res = await fetch(url);
+    const data = await res.json();
+    if (data.code === "Ok" && data.routes?.[0]) {
+      const coords = data.routes[0].geometry.coordinates.map(([lng, lat]) => [
+        lat,
+        lng,
+      ]);
+      const distance = data.routes[0].distance; // meters
+      return { coords, distance };
+    }
+  } catch {
+    /* ignore */
+  }
+  return null;
+}
+
+// Reverse geocode a position to a street name
+async function reverseGeocode(lat, lng) {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=17&addressdetails=1`,
+    );
+    const data = await res.json();
+    const addr = data.address;
+    const street =
+      addr?.road ||
+      addr?.pedestrian ||
+      addr?.path ||
+      addr?.neighbourhood ||
+      "Unknown Street";
+    const area =
+      addr?.suburb ||
+      addr?.neighbourhood ||
+      addr?.city_district ||
+      addr?.city ||
+      "";
+    return area ? `${street}, ${area}` : street;
+  } catch {
+    return "Unknown Street";
+  }
+}
+
+function initVehicles() {
+  return Array.from({ length: 20 }, (_, i) => {
+    const wp = randomWaypoint();
+    const status = ["en_route", "available", "charging"][randInt(0, 3)];
+    return {
+      id: `CX-${String(i + 1).padStart(3, "0")}`,
+      lat: wp[0] + rand(-0.02, 0.02),
+      lng: wp[1] + rand(-0.02, 0.02),
+      battery: randInt(15, 100),
+      speed: status === "en_route" ? randInt(18, 55) : 0,
+      status,
+      passenger: status === "en_route" ? randomPassenger() : null,
+      destination: status === "en_route" ? randomDestName() : null,
+      eta: status === "en_route" ? randInt(3, 28) : null,
+      tripCount: randInt(0, 12),
+      mileage: randInt(0, 280),
+      // Route following
+      routeCoords: null, // array of [lat,lng]
+      routeIndex: 0, // current position index
+      currentStreet: null, // reverse geocoded street name
+    };
+  });
+}
+
 // ── MAP ──
-function FleetMap({ vehicles, selectedId, onSelect }) {
+function FleetMap({ vehicles, selectedId, onSelect, dayMode }) {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const markersRef = useRef({});
   const initialized = useRef(false);
   const onSelectRef = useRef(onSelect);
-  const selectedIdRef = useRef(selectedId);
 
   useEffect(() => {
     onSelectRef.current = onSelect;
   }, [onSelect]);
-  useEffect(() => {
-    selectedIdRef.current = selectedId;
-  }, [selectedId]);
 
-  // Init map once
   useEffect(() => {
     if (!document.getElementById("leaflet-css-rt")) {
       const link = document.createElement("link");
@@ -162,7 +222,6 @@ function FleetMap({ vehicles, selectedId, onSelect }) {
         s.onload = () => resolve(window.L);
         document.body.appendChild(s);
       });
-
     load().then((L) => {
       if (initialized.current || !mapRef.current) return;
       initialized.current = true;
@@ -172,14 +231,12 @@ function FleetMap({ vehicles, selectedId, onSelect }) {
         zoomControl: false,
         attributionControl: false,
       });
-      L.tileLayer(
-        "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-        { maxZoom: 19 },
-      ).addTo(map);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+      }).addTo(map);
       L.control.zoom({ position: "bottomright" }).addTo(map);
       mapInstanceRef.current = map;
     });
-
     return () => {
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
@@ -187,14 +244,12 @@ function FleetMap({ vehicles, selectedId, onSelect }) {
         initialized.current = false;
       }
     };
-  }, []); // intentionally empty — init once only
+  }, []);
 
-  // Update markers whenever vehicles or selectedId changes
   useEffect(() => {
     const L = window.L;
     const map = mapInstanceRef.current;
     if (!L || !map) return;
-
     vehicles.forEach((v) => {
       const color = statusColor(v.status);
       const isSelected = v.id === selectedId;
@@ -223,14 +278,13 @@ function FleetMap({ vehicles, selectedId, onSelect }) {
     });
   }, [vehicles, selectedId]);
 
-  // Pan to selected vehicle
   useEffect(() => {
     if (!selectedId || !mapInstanceRef.current) return;
     const v = vehicles.find((x) => x.id === selectedId);
     if (v)
       mapInstanceRef.current.panTo([v.lat, v.lng], {
         animate: true,
-        duration: 0.5,
+        duration: 0.6,
       });
   }, [selectedId, vehicles]);
 
@@ -243,14 +297,65 @@ export default function RoboTaxi() {
   const [selectedId, setSelectedId] = useState(null);
   const [filter, setFilter] = useState("all");
   const [alerts, setAlerts] = useState([]);
+  const routeFetchQueue = useRef(new Set());
 
   const selected = vehicles.find((v) => v.id === selectedId);
 
-  // Simulate live updates
+  // Fetch real routes for en_route vehicles that don't have one yet
+  const fetchRoutesForVehicles = useCallback((vList) => {
+    vList.forEach(async (v) => {
+      if (
+        v.status !== "en_route" ||
+        v.routeCoords ||
+        routeFetchQueue.current.has(v.id)
+      )
+        return;
+      routeFetchQueue.current.add(v.id);
+      const dest = randomWaypoint();
+      const route = await fetchRoute([v.lat, v.lng], dest);
+      if (route && route.coords.length > 1) {
+        setVehicles((prev) =>
+          prev.map((pv) =>
+            pv.id === v.id
+              ? { ...pv, routeCoords: route.coords, routeIndex: 0 }
+              : pv,
+          ),
+        );
+      }
+      routeFetchQueue.current.delete(v.id);
+    });
+  }, []);
+
+  // Initial route fetch
+  useEffect(() => {
+    fetchRoutesForVehicles(vehicles);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const selectedLat = selected?.lat || 0;
+  const selectedLatBucket = Math.floor(selectedLat * 1000);
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!selected) return;
+    let cancelled = false;
+    reverseGeocode(selected.lat, selected.lng).then((street) => {
+      if (!cancelled) {
+        setVehicles((prev) =>
+          prev.map((v) =>
+            v.id === selected.id ? { ...v, currentStreet: street } : v,
+          ),
+        );
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [selected?.id, selectedLatBucket]);
+  // Simulate live updates — move along real route coords
   useEffect(() => {
     const interval = setInterval(() => {
-      setVehicles((prev) =>
-        prev.map((v) => {
+      setVehicles((prev) => {
+        const updated = prev.map((v) => {
           let {
             lat,
             lng,
@@ -260,45 +365,59 @@ export default function RoboTaxi() {
             passenger,
             destination,
             eta,
-            heading,
             tripCount,
             mileage,
+            routeCoords,
+            routeIndex,
           } = v;
 
           if (status === "en_route") {
-            const rad = (heading * Math.PI) / 180;
-            const dist = speed * 0.000005;
-            lat = clamp(
-              lat + Math.cos(rad) * dist,
-              LA_BOUNDS.minLat,
-              LA_BOUNDS.maxLat,
-            );
-            lng = clamp(
-              lng + Math.sin(rad) * dist,
-              LA_BOUNDS.minLng,
-              LA_BOUNDS.maxLng,
-            );
-            heading = (heading + rand(-8, 8) + 360) % 360;
-            battery = Math.max(0, battery - 0.08);
-            mileage += speed * 0.0003;
-            eta = Math.max(0, eta - 0.05);
-            speed = clamp(speed + rand(-3, 3), 18, 65);
-            if (eta <= 0 || battery < 8) {
-              status = battery < 8 ? "charging" : "available";
-              passenger = null;
-              destination = null;
-              eta = null;
+            battery = Math.max(0, battery - 0.06);
+            eta = Math.max(0, (eta || 0) - 0.05);
+
+            if (routeCoords && routeCoords.length > 0) {
+              // Move to next point on route
+              const nextIndex = Math.min(
+                routeIndex + 1,
+                routeCoords.length - 1,
+              );
+              lat = routeCoords[nextIndex][0];
+              lng = routeCoords[nextIndex][1];
+              routeIndex = nextIndex;
+              mileage += speed * 0.0003;
+              speed = Math.min(
+                55,
+                Math.max(18, speed + (Math.random() - 0.5) * 6),
+              );
+
+              // Reached end of route or battery low
+              if (
+                nextIndex >= routeCoords.length - 1 ||
+                eta <= 0 ||
+                battery < 8
+              ) {
+                status = battery < 8 ? "charging" : "available";
+                passenger = null;
+                destination = null;
+                eta = null;
+                speed = 0;
+                routeCoords = null;
+                routeIndex = 0;
+                tripCount += 1;
+              }
+            } else {
+              // No route yet — stay put and wait for route fetch
               speed = 0;
-              tripCount += 1;
             }
           } else if (status === "available") {
             if (Math.random() < 0.04) {
               status = "en_route";
               passenger = randomPassenger();
-              destination = randomDestination();
+              destination = randomDestName();
               eta = randInt(4, 22);
-              speed = randInt(20, 55);
-              heading = rand(0, 360);
+              speed = randInt(20, 45);
+              routeCoords = null;
+              routeIndex = 0;
             }
           } else if (status === "charging") {
             battery = Math.min(100, battery + 0.6);
@@ -315,17 +434,31 @@ export default function RoboTaxi() {
             passenger,
             destination,
             eta,
-            heading,
             tripCount,
             mileage,
+            routeCoords,
+            routeIndex,
           };
-        }),
-      );
+        });
+
+        // Fetch routes for newly en_route vehicles
+        const needRoutes = updated.filter(
+          (v) =>
+            v.status === "en_route" &&
+            !v.routeCoords &&
+            !routeFetchQueue.current.has(v.id),
+        );
+        if (needRoutes.length > 0) {
+          setTimeout(() => fetchRoutesForVehicles(needRoutes), 0);
+        }
+
+        return updated;
+      });
     }, 2000);
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchRoutesForVehicles]);
 
-  // Low battery alerts — depends only on vehicles
+  // Low battery alerts
   useEffect(() => {
     vehicles.forEach((v) => {
       if (v.battery < 15 && v.status === "en_route") {
@@ -347,7 +480,6 @@ export default function RoboTaxi() {
   const filtered = vehicles.filter(
     (v) => filter === "all" || v.status === filter,
   );
-
   const stats = {
     enRoute: vehicles.filter((v) => v.status === "en_route").length,
     available: vehicles.filter((v) => v.status === "available").length,
@@ -356,13 +488,11 @@ export default function RoboTaxi() {
       vehicles.reduce((s, v) => s + v.battery, 0) / vehicles.length,
     ),
   };
-
   const dismissAlert = (id) =>
     setAlerts((prev) => prev.filter((a) => a.id !== id));
 
   return (
     <div className="rt-root">
-      {/* TOP BAR */}
       <header className="rt-header">
         <div className="rt-header-left">
           <div className="rt-logo">
@@ -384,7 +514,6 @@ export default function RoboTaxi() {
             LIVE
           </div>
         </div>
-
         <div className="rt-stats-row">
           <div className="rt-stat-pill rt-stat-pill--blue">
             <span className="rt-stat-val">{stats.enRoute}</span>
@@ -403,13 +532,11 @@ export default function RoboTaxi() {
             <span className="rt-stat-lbl">Avg Battery</span>
           </div>
         </div>
-
         <a href="/" className="rt-back-btn">
           ← Portfolio
         </a>
       </header>
 
-      {/* ALERTS */}
       {alerts.length > 0 && (
         <div className="rt-alerts">
           {alerts.map((a) => (
@@ -427,9 +554,7 @@ export default function RoboTaxi() {
         </div>
       )}
 
-      {/* BODY */}
       <div className="rt-body">
-        {/* SIDEBAR */}
         <aside className="rt-sidebar">
           <div className="rt-sidebar-top">
             <span className="rt-sidebar-title">
@@ -501,7 +626,6 @@ export default function RoboTaxi() {
           </div>
         </aside>
 
-        {/* MAP */}
         <main className="rt-map-container">
           <FleetMap
             vehicles={vehicles}
@@ -510,7 +634,6 @@ export default function RoboTaxi() {
           />
         </main>
 
-        {/* DETAIL PANEL */}
         <aside className={`rt-detail ${selected ? "rt-detail--open" : ""}`}>
           {selected ? (
             <>
@@ -531,6 +654,19 @@ export default function RoboTaxi() {
                   ✕
                 </button>
               </div>
+
+              {/* CURRENT STREET */}
+              {selected.currentStreet && (
+                <div className="rt-detail-street">
+                  <div className="rt-street-icon">📍</div>
+                  <div>
+                    <div className="rt-street-label">Current Location</div>
+                    <div className="rt-street-name">
+                      {selected.currentStreet}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <div className="rt-detail-battery">
                 <div className="rt-db-label">
@@ -600,9 +736,36 @@ export default function RoboTaxi() {
                   <div className="rt-trip-eta">
                     <span className="rt-trip-eta-label">ETA</span>
                     <span className="rt-trip-eta-val">
-                      {Math.ceil(selected.eta)} min
+                      {Math.ceil(selected.eta || 0)} min
                     </span>
                   </div>
+                  {selected.routeCoords && (
+                    <div className="rt-trip-progress">
+                      <div className="rt-trip-prog-label">Route Progress</div>
+                      <div className="rt-trip-prog-bar">
+                        <div
+                          className="rt-trip-prog-fill"
+                          style={{
+                            width: `${Math.min(100, (selected.routeIndex / Math.max(1, (selected.routeCoords?.length || 1) - 1)) * 100)}%`,
+                          }}
+                        />
+                      </div>
+                      <div className="rt-trip-prog-pct">
+                        {Math.floor(
+                          Math.min(
+                            100,
+                            (selected.routeIndex /
+                              Math.max(
+                                1,
+                                (selected.routeCoords?.length || 1) - 1,
+                              )) *
+                              100,
+                          ),
+                        )}
+                        % complete
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
