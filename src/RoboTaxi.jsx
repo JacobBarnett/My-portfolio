@@ -160,7 +160,6 @@ async function reverseGeocode(lat, lng) {
     return "Locating...";
   }
 }
-
 function initVehicles() {
   return Array.from({ length: 20 }, (_, i) => {
     const wp = LA_WAYPOINTS[i % LA_WAYPOINTS.length];
