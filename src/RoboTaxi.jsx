@@ -145,26 +145,17 @@ async function fetchRoute(from, to) {
 async function reverseGeocode(lat, lng) {
   try {
     const res = await fetch(
-      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=17&addressdetails=1`,
-      { headers: { "Accept-Language": "en" } },
+      `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lng}&localityLanguage=en`,
     );
     const data = await res.json();
-    if (data.error) return "Locating...";
-    const addr = data.address;
     const street =
-      addr?.road ||
-      addr?.pedestrian ||
-      addr?.path ||
-      addr?.neighbourhood ||
-      addr?.suburb ||
+      data.localityInfo?.administrative?.[4]?.name ||
+      data.localityInfo?.administrative?.[3]?.name ||
+      data.locality ||
+      data.city ||
       "Unknown Street";
-    const area =
-      addr?.suburb ||
-      addr?.neighbourhood ||
-      addr?.city_district ||
-      addr?.city ||
-      "";
-    return area ? `${street}, ${area}` : street;
+    const area = data.locality || data.principalSubdivision || "";
+    return area && area !== street ? `${street}, ${area}` : street;
   } catch {
     return "Locating...";
   }
