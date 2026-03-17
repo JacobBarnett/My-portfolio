@@ -625,7 +625,7 @@ export default function RoboTaxi() {
 
         <main className="rt-map-container">
           <FleetMap
-            vehicles={vehicles}
+            vehicles={filtered}
             selectedId={selectedId}
             onSelect={setSelectedId}
           />
