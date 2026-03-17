@@ -661,7 +661,7 @@
   grid-row: 2/3;
   background: #181818;
   border-top: 1px solid #282828;
-  display: grid;
+  display: none;
   grid-template-columns: 1fr 2fr 1fr;
   align-items: center;
   padding: 0 12px;

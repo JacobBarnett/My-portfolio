@@ -462,7 +462,10 @@
   flex-shrink: 0;
   cursor: pointer;
   transition: background 0.2s;
-  position: relative;
+  position: sticky;
+  bottom: 0;
+  z-index: 50;
+  backdrop-filter: blur(20px);
 }
 .music-bar::before {
   content: "";
