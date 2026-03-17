@@ -169,12 +169,12 @@ async function reverseGeocode(lat, lng) {
 
 function initVehicles() {
   return Array.from({ length: 20 }, (_, i) => {
-    const wp = randomWaypoint();
+    const wp = LA_WAYPOINTS[i % LA_WAYPOINTS.length];
     const status = ["en_route", "available", "charging"][randInt(0, 3)];
     return {
       id: `CX-${String(i + 1).padStart(3, "0")}`,
-      lat: wp[0] + rand(-0.02, 0.02),
-      lng: wp[1] + rand(-0.02, 0.02),
+      lat: wp[0],
+      lng: wp[1],
       battery: randInt(15, 100),
       speed: status === "en_route" ? randInt(18, 55) : 0,
       status,
@@ -286,7 +286,7 @@ function FleetMap({ vehicles, selectedId, onSelect, dayMode }) {
         animate: true,
         duration: 0.6,
       });
-  }, [selectedId, vehicles]);
+  }, [selectedId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return <div ref={mapRef} className="rt-map" />;
 }
