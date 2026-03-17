@@ -196,12 +196,9 @@ function MiniMap({ dayMode }) {
 
   useEffect(() => {
     if (!mapRef.current) return;
-    if (dayMode) {
-      mapRef.current.style.filter =
-        "invert(0.88) hue-rotate(180deg) brightness(1.05)";
-    } else {
-      mapRef.current.style.filter = "none";
-    }
+    mapRef.current.style.filter = dayMode
+      ? "invert(0.88) hue-rotate(180deg) brightness(1.05)"
+      : "none";
   }, [dayMode]);
 
   return <div ref={mapRef} className="home-mini-map" />;
@@ -582,6 +579,7 @@ export default function TeslaUI() {
             </div>
           )}
         </div>
+
         {/* CENTER PANEL */}
         <div className="tesla-center">
           <div className="center-tabs">
@@ -651,8 +649,6 @@ export default function TeslaUI() {
                   <div className="hc-sub">{brightness}%</div>
                 </div>
               </div>
-
-              {/* MINI MAP on home */}
               <div className="home-map-section">
                 <div className="home-map-header">
                   <span className="home-map-label">📍 Anaheim, CA</span>
@@ -798,17 +794,6 @@ export default function TeslaUI() {
               <NavMap destination={destination} activePanel={activePanel} />
             </div>
           )}
-
-          {/* PERSISTENT MUSIC BAR */}
-          <MusicBar
-            nowPlaying={nowPlaying}
-            isPlaying={isPlaying}
-            onPlayPause={handlePlayPause}
-            onPrev={handlePrev}
-            onNext={handleNext}
-            onOpenMusic={() => setActivePanel("music")}
-            token={token}
-          />
         </div>
 
         {/* RIGHT PANEL */}
@@ -851,6 +836,17 @@ export default function TeslaUI() {
           </a>
         </div>
       </div>
+
+      {/* MUSIC BAR — fixed outside all panels, always visible */}
+      <MusicBar
+        nowPlaying={nowPlaying}
+        isPlaying={isPlaying}
+        onPlayPause={handlePlayPause}
+        onPrev={handlePrev}
+        onNext={handleNext}
+        onOpenMusic={() => setActivePanel("music")}
+        token={token}
+      />
     </div>
   );
 }

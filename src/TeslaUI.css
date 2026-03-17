@@ -463,9 +463,9 @@
   transition: background 0.2s;
   position: fixed;
   bottom: 0;
-  left: 280px;
-  right: 200px;
-  z-index: 200;
+  left: 0;
+  right: 0;
+  z-index: 500;
   backdrop-filter: blur(20px);
 }
 .music-bar::before {
