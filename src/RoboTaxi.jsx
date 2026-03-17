@@ -331,26 +331,25 @@ export default function RoboTaxi() {
     fetchRoutesForVehicles(vehicles);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const selectedLat = selected?.lat || 0;
-  const selectedLatBucket = Math.floor(selectedLat * 1000);
-
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!selected) return;
     let cancelled = false;
-    reverseGeocode(selected.lat, selected.lng).then((street) => {
+    const id = selected.id;
+    const lat = selected.lat;
+    const lng = selected.lng;
+    reverseGeocode(lat, lng).then((street) => {
       if (!cancelled) {
         setVehicles((prev) =>
-          prev.map((v) =>
-            v.id === selected.id ? { ...v, currentStreet: street } : v,
-          ),
+          prev.map((v) => (v.id === id ? { ...v, currentStreet: street } : v)),
         );
       }
     });
     return () => {
       cancelled = true;
     };
-  }, [selected?.id, selectedLatBucket]);
+  }, [selected]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Simulate live updates — move along real route coords
   useEffect(() => {
     const interval = setInterval(() => {
