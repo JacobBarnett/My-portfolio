@@ -3,7 +3,6 @@ import "./TeslaUI.css";
 import SpotifyPanel from "./SpotifyPanel";
 import TeslaModel3D from "./TeslaModel3D";
 
-// ── SPOTIFY CONFIG ──
 const CLIENT_ID = "235a98443cd04cc88e4cbe64c9badd7f";
 const REDIRECT_URI = "https://jacobbarnett.dev/callback";
 const SCOPES = [
@@ -18,7 +17,6 @@ const SCOPES = [
   "playlist-read-collaborative",
 ].join(" ");
 
-// ── PKCE HELPERS ──
 function generateCodeVerifier() {
   const array = new Uint8Array(32);
   window.crypto.getRandomValues(array);
@@ -96,7 +94,6 @@ async function spotifyFetch(endpoint, options = {}) {
   }
 }
 
-// ── CLOCK ──
 function useClock() {
   const [time, setTime] = useState(new Date());
   useEffect(() => {
@@ -118,7 +115,6 @@ function waitForSize(el, maxMs = 3000) {
   });
 }
 
-// ── SHARED MAP FACTORY ──
 function createLeafletMap(container, opts = {}) {
   const L = window.L;
   const map = L.map(container, {
@@ -145,12 +141,10 @@ function createLeafletMap(container, opts = {}) {
   return map;
 }
 
-// ── MINI MAP (home panel) ──
 function MiniMap({ dayMode }) {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const initialized = useRef(false);
-
   useEffect(() => {
     if (!document.getElementById("leaflet-css")) {
       const link = document.createElement("link");
@@ -193,24 +187,20 @@ function MiniMap({ dayMode }) {
       }
     };
   }, []);
-
   useEffect(() => {
     if (!mapRef.current) return;
     mapRef.current.style.filter = dayMode
       ? "invert(0.88) hue-rotate(180deg) brightness(1.05)"
       : "none";
   }, [dayMode]);
-
   return <div ref={mapRef} className="home-mini-map" />;
 }
 
-// ── NAV MAP ──
 function NavMap({ destination, activePanel }) {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const routeLayerRef = useRef(null);
   const markerRef = useRef(null);
-
   useEffect(() => {
     if (!document.getElementById("leaflet-css")) {
       const link = document.createElement("link");
@@ -249,7 +239,6 @@ function NavMap({ destination, activePanel }) {
       }
     };
   }, []);
-
   useEffect(() => {
     if (activePanel !== "nav" || !mapInstanceRef.current) return;
     requestAnimationFrame(() =>
@@ -258,7 +247,6 @@ function NavMap({ destination, activePanel }) {
       }),
     );
   }, [activePanel]);
-
   useEffect(() => {
     if (!destination) return;
     const drawRoute = async () => {
@@ -309,11 +297,10 @@ function NavMap({ destination, activePanel }) {
     };
     drawRoute();
   }, [destination]);
-
   return <div ref={mapRef} className="leaflet-map" />;
 }
 
-// ── PERSISTENT MUSIC BAR ──
+// ── SPOTIFY-STYLE MUSIC BAR ──
 function MusicBar({
   nowPlaying,
   isPlaying,
@@ -322,41 +309,129 @@ function MusicBar({
   onNext,
   onOpenMusic,
   token,
+  progress,
+  duration,
+  shuffle,
+  onShuffle,
+  repeat,
+  onRepeat,
 }) {
   if (!token || !nowPlaying) return null;
+
+  const pct = duration > 0 ? (progress / duration) * 100 : 0;
+  const fmt = (ms) => {
+    if (!ms) return "0:00";
+    const s = Math.floor(ms / 1000);
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  };
+
   return (
-    <div className="music-bar" onClick={onOpenMusic}>
-      <img
-        src={nowPlaying.album?.images?.[2]?.url}
-        alt="album"
-        className="music-bar-art"
-      />
-      <div className="music-bar-info">
-        <div className="music-bar-title">{nowPlaying.name}</div>
-        <div className="music-bar-artist">{nowPlaying.artists?.[0]?.name}</div>
+    <div className="music-bar">
+      {/* LEFT — track info */}
+      <div className="music-bar-left" onClick={onOpenMusic}>
+        <img
+          src={nowPlaying.album?.images?.[2]?.url}
+          alt="album"
+          className="music-bar-art"
+        />
+        <div className="music-bar-info">
+          <div className="music-bar-title">{nowPlaying.name}</div>
+          <div className="music-bar-artist">
+            {nowPlaying.artists?.[0]?.name}
+          </div>
+        </div>
       </div>
-      <div className="music-bar-controls" onClick={(e) => e.stopPropagation()}>
-        <button onClick={onPrev} className="music-bar-btn">
-          ⏮
-        </button>
-        <button onClick={onPlayPause} className="music-bar-btn music-bar-play">
-          {isPlaying ? "⏸" : "▶"}
-        </button>
-        <button onClick={onNext} className="music-bar-btn">
-          ⏭
-        </button>
+
+      {/* CENTER — controls + progress */}
+      <div className="music-bar-center">
+        <div className="music-bar-controls">
+          <button
+            className={`music-bar-btn mbc-icon ${shuffle ? "mbc-active" : ""}`}
+            onClick={onShuffle}
+            title="Shuffle"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M16.069 15.5H14.14a5.75 5.75 0 0 1-4.363-2.013l-5.051-5.94A3.75 3.75 0 0 0 1.875 6H0v2h1.875a1.75 1.75 0 0 1 1.336.619l5.051 5.94A7.75 7.75 0 0 0 14.14 17.5h1.929l-1.065 1.065 1.414 1.414L19.847 16.5l-3.429-3.479-1.414 1.414L16.069 15.5zM0 16h1.875a1.75 1.75 0 0 0 1.336-.619l1.085-1.277 1.514 1.782-1.048 1.233A3.75 3.75 0 0 1 1.875 18H0v2zM16.069 8.5l-1.065-1.065 1.414-1.414L19.847 9.5l-3.429 3.479-1.414-1.414L16.069 10.5H14.14a1.75 1.75 0 0 0-1.336.619l-.547.644-1.514-1.782.547-.644A3.75 3.75 0 0 1 14.14 8.5h1.929z" />
+            </svg>
+          </button>
+          <button
+            className="music-bar-btn mbc-icon"
+            onClick={onPrev}
+            title="Previous"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M3.3 1a.7.7 0 0 1 .7.7v8.15l9.95-8.744a.75.75 0 0 1 1.25.562v19.064a.75.75 0 0 1-1.25.562L4 12.646V20.3a.7.7 0 0 1-1.4 0V1.7a.7.7 0 0 1 .7-.7z" />
+            </svg>
+          </button>
+          <button className="music-bar-btn mbc-play" onClick={onPlayPause}>
+            {isPlaying ? (
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M5.7 3a.7.7 0 0 0-.7.7v16.6a.7.7 0 0 0 .7.7h2.6a.7.7 0 0 0 .7-.7V3.7a.7.7 0 0 0-.7-.7H5.7zm10 0a.7.7 0 0 0-.7.7v16.6a.7.7 0 0 0 .7.7h2.6a.7.7 0 0 0 .7-.7V3.7a.7.7 0 0 0-.7-.7h-2.6z" />
+              </svg>
+            ) : (
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="currentColor"
+              >
+                <path d="M7.05 3.606l13.49 7.577a.7.7 0 0 1 0 1.214L7.05 19.974A.7.7 0 0 1 6 19.367V4.633a.7.7 0 0 1 1.05-.607z" />
+              </svg>
+            )}
+          </button>
+          <button
+            className="music-bar-btn mbc-icon"
+            onClick={onNext}
+            title="Next"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M20.7 1a.7.7 0 0 1 .7.7v18.6a.7.7 0 0 1-1.4 0V12.646l-9.95 8.658A.75.75 0 0 1 8.8 20.74V1.562A.75.75 0 0 1 10.05 1l9.95 8.15V1.7a.7.7 0 0 1 .7-.7z" />
+            </svg>
+          </button>
+          <button
+            className={`music-bar-btn mbc-icon ${repeat !== "off" ? "mbc-active" : ""}`}
+            onClick={onRepeat}
+            title="Repeat"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M0 13.151a2.554 2.554 0 0 0 2.546 2.554h9.458v2l3.484-2.827-3.484-2.828v2H2.546A.554.554 0 0 1 2 13.15V6h6V4H2.546A2.554 2.554 0 0 0 0 6.554v6.597zm21.454-8.697H12v-2l-3.484 2.827L12 8.108v-2h9.454c.306 0 .546.24.546.546v7.096h-6v2h6A2.554 2.554 0 0 0 24 13.15V6.554a2.554 2.554 0 0 0-2.546-2.554v.454z" />
+            </svg>
+          </button>
+        </div>
+        <div className="music-bar-progress">
+          <span className="music-bar-time">{fmt(progress)}</span>
+          <div className="music-bar-track">
+            <div className="music-bar-fill" style={{ width: `${pct}%` }} />
+          </div>
+          <span className="music-bar-time">{fmt(duration)}</span>
+        </div>
+      </div>
+
+      {/* RIGHT — volume placeholder */}
+      <div className="music-bar-right">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="var(--muted)">
+          <path d="M12 3.75a.75.75 0 0 0-1.2-.6L5.55 7.5H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h3.55l5.25 4.35a.75.75 0 0 0 1.2-.6V3.75zm2.76 2.36a.75.75 0 0 1 1.06.04 8.5 8.5 0 0 1 0 11.7.75.75 0 1 1-1.1-1.02 7 7 0 0 0 0-9.66.75.75 0 0 1 .04-1.06z" />
+        </svg>
       </div>
     </div>
   );
 }
 
-// ── MAIN COMPONENT ──
 export default function TeslaUI() {
   const time = useClock();
   const [token, setToken] = useState(localStorage.getItem("spotify_token"));
   const [authLoading, setAuthLoading] = useState(false);
   const [nowPlaying, setNowPlaying] = useState(null);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [duration, setDuration] = useState(0);
+  const [shuffle, setShuffle] = useState(false);
+  const [repeat, setRepeat] = useState("off");
   const [temp, setTemp] = useState(72);
   const [acOn, setAcOn] = useState(true);
   const [gear, setGear] = useState("P");
@@ -369,8 +444,8 @@ export default function TeslaUI() {
   const [destination, setDestination] = useState("");
   const [navHistory, setNavHistory] = useState([]);
   const [navVisited, setNavVisited] = useState(false);
+  const progressInterval = useRef(null);
 
-  // ── OAuth callback ──
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const code = params.get("code");
@@ -400,7 +475,6 @@ export default function TeslaUI() {
     }
   }, []);
 
-  // ── Token expiry ──
   useEffect(() => {
     const interval = setInterval(() => {
       const expiry = localStorage.getItem("spotify_expires");
@@ -414,13 +488,16 @@ export default function TeslaUI() {
     return () => clearInterval(interval);
   }, []);
 
-  // ── Poll now playing ──
   const fetchNowPlaying = useCallback(async () => {
     if (!token) return;
     const data = await spotifyFetch("/me/player/currently-playing");
     if (data && data.item) {
       setNowPlaying(data.item);
       setIsPlaying(data.is_playing);
+      setProgress(data.progress_ms || 0);
+      setDuration(data.item.duration_ms || 0);
+      setShuffle(data.shuffle_state || false);
+      setRepeat(data.repeat_state || "off");
     } else {
       setNowPlaying(null);
       setIsPlaying(false);
@@ -433,6 +510,18 @@ export default function TeslaUI() {
     const interval = setInterval(fetchNowPlaying, 5000);
     return () => clearInterval(interval);
   }, [token, fetchNowPlaying]);
+
+  // Progress ticker
+  useEffect(() => {
+    if (progressInterval.current) clearInterval(progressInterval.current);
+    if (isPlaying) {
+      progressInterval.current = setInterval(
+        () => setProgress((p) => Math.min(p + 1000, duration)),
+        1000,
+      );
+    }
+    return () => clearInterval(progressInterval.current);
+  }, [isPlaying, duration]);
 
   const handlePlayPause = async () => {
     await spotifyFetch(isPlaying ? "/me/player/pause" : "/me/player/play", {
@@ -447,6 +536,17 @@ export default function TeslaUI() {
   const handlePrev = async () => {
     await spotifyFetch("/me/player/previous", { method: "POST" });
     setTimeout(fetchNowPlaying, 900);
+  };
+  const handleShuffle = async () => {
+    const next = !shuffle;
+    setShuffle(next);
+    await spotifyFetch(`/me/player/shuffle?state=${next}`, { method: "PUT" });
+  };
+  const handleRepeat = async () => {
+    const modes = ["off", "context", "track"];
+    const next = modes[(modes.indexOf(repeat) + 1) % 3];
+    setRepeat(next);
+    await spotifyFetch(`/me/player/repeat?state=${next}`, { method: "PUT" });
   };
   const logout = () => {
     localStorage.removeItem("spotify_token");
@@ -485,7 +585,6 @@ export default function TeslaUI() {
       className={`tesla-wrapper${dayMode ? " day-mode" : ""}`}
       style={{ "--brightness-overlay": `${((100 - brightness) / 100) * 0.85}` }}
     >
-      {/* STATUS BAR */}
       <div className="tesla-statusbar">
         <div className="tsb-left">
           <span className="tsb-time">{formatTime(time)}</span>
@@ -507,7 +606,7 @@ export default function TeslaUI() {
           <button
             className="tsb-daynight"
             onClick={() => setDayMode((d) => !d)}
-            title={dayMode ? "Switch to Night Mode" : "Switch to Day Mode"}
+            title={dayMode ? "Night Mode" : "Day Mode"}
           >
             {dayMode ? "🌙" : "☀️"}
           </button>
@@ -517,9 +616,7 @@ export default function TeslaUI() {
         </div>
       </div>
 
-      {/* MAIN LAYOUT */}
       <div className="tesla-main">
-        {/* LEFT PANEL */}
         <div className="tesla-left">
           <div className="car-viz">
             <TeslaModel3D dayMode={dayMode} />
@@ -562,7 +659,6 @@ export default function TeslaUI() {
               </button>
             </div>
           </div>
-
           {token && nowPlaying && (
             <div className="left-now-playing">
               <img
@@ -580,7 +676,6 @@ export default function TeslaUI() {
           )}
         </div>
 
-        {/* CENTER PANEL */}
         <div className="tesla-center">
           <div className="center-tabs">
             {[
@@ -603,7 +698,6 @@ export default function TeslaUI() {
             ))}
           </div>
 
-          {/* HOME */}
           {activePanel === "home" && (
             <div className="panel home-panel">
               <div className="home-grid">
@@ -667,7 +761,6 @@ export default function TeslaUI() {
             </div>
           )}
 
-          {/* MUSIC */}
           {activePanel === "music" && (
             <div className="panel music-panel">
               {!token ? (
@@ -696,7 +789,6 @@ export default function TeslaUI() {
             </div>
           )}
 
-          {/* NAVIGATION */}
           {activePanel === "nav" && (
             <div className="panel nav-panel">
               <div className="nav-search-row">
@@ -745,7 +837,6 @@ export default function TeslaUI() {
             </div>
           )}
 
-          {/* SETTINGS */}
           {activePanel === "settings" && (
             <div className="panel settings-panel">
               {[
@@ -780,7 +871,6 @@ export default function TeslaUI() {
             </div>
           )}
 
-          {/* NAV MAP */}
           {navVisited && (
             <div
               style={{
@@ -796,7 +886,6 @@ export default function TeslaUI() {
           )}
         </div>
 
-        {/* RIGHT PANEL */}
         <div className="tesla-right">
           <div className="right-time">
             <div className="rt-time">{formatTime(time)}</div>
@@ -837,7 +926,7 @@ export default function TeslaUI() {
         </div>
       </div>
 
-      {/* MUSIC BAR — fixed outside all panels, always visible */}
+      {/* FIXED MUSIC BAR */}
       <MusicBar
         nowPlaying={nowPlaying}
         isPlaying={isPlaying}
@@ -846,6 +935,12 @@ export default function TeslaUI() {
         onNext={handleNext}
         onOpenMusic={() => setActivePanel("music")}
         token={token}
+        progress={progress}
+        duration={duration}
+        shuffle={shuffle}
+        onShuffle={handleShuffle}
+        repeat={repeat}
+        onRepeat={handleRepeat}
       />
     </div>
   );
