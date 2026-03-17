@@ -243,15 +243,26 @@ function FleetMap({ vehicles, selectedId, onSelect, dayMode }) {
     const L = window.L;
     const map = mapInstanceRef.current;
     if (!L || !map) return;
+
+    // Hide markers not in current vehicles list
+    Object.keys(markersRef.current).forEach((id) => {
+      const inFiltered = vehicles.find((v) => v.id === id);
+      if (!inFiltered) {
+        map.removeLayer(markersRef.current[id]);
+        delete markersRef.current[id];
+      }
+    });
+
+    // Update or add markers for filtered vehicles
     vehicles.forEach((v) => {
       const color = statusColor(v.status);
       const isSelected = v.id === selectedId;
       const html = `
-        <div class="rt-marker ${isSelected ? "rt-marker--selected" : ""}" style="--mc:${color}">
-          <div class="rt-marker-dot"></div>
-          ${v.status === "en_route" ? '<div class="rt-marker-pulse"></div>' : ""}
-          <div class="rt-marker-label">${v.id}</div>
-        </div>`;
+      <div class="rt-marker ${isSelected ? "rt-marker--selected" : ""}" style="--mc:${color}">
+        <div class="rt-marker-dot"></div>
+        ${v.status === "en_route" ? '<div class="rt-marker-pulse"></div>' : ""}
+        <div class="rt-marker-label">${v.id}</div>
+      </div>`;
       const icon = L.divIcon({
         className: "",
         html,
