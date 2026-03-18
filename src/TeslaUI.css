@@ -1,29 +1,32 @@
-@import url("https://fonts.googleapis.com/css2?family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Roboto+Mono:wght@300;400;500&display=swap");
 
-/* ── VARIABLES ── */
+/* ── DESIGN PHILOSOPHY: Real Tesla — white, airy, restrained ── */
 .tesla-wrapper {
-  --bg: #0d0d0f;
-  --surface: #111114;
-  --surface2: #18181c;
-  --surface3: #202026;
-  --accent: #e82127;
-  --accent-glow: rgba(232, 33, 39, 0.25);
-  --accent2: #3a7bd5;
-  --green: #1db954;
-  --text: #f2f2f4;
-  --muted: #6b6b75;
-  --border: rgba(255, 255, 255, 0.07);
-  --glass: rgba(255, 255, 255, 0.04);
-  --shadow: 0 4px 24px rgba(0, 0, 0, 0.5);
+  --bg: #f5f5f0;
+  --surface: #ffffff;
+  --surface2: #f0f0eb;
+  --accent: #cc0000;
+  --text: #1a1a1a;
+  --text2: #3a3a3a;
+  --muted: #8a8a8a;
+  --subtle: #c8c8c8;
+  --green: #33a852;
+  --border: rgba(0, 0, 0, 0.06);
+  --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.08);
 
   min-height: 100vh;
   background: var(--bg);
   color: var(--text);
-  font-family: "Rajdhani", sans-serif;
+  font-family:
+    "Inter",
+    -apple-system,
+    sans-serif;
   display: flex;
   flex-direction: column;
   overflow: hidden;
   user-select: none;
+  -webkit-font-smoothing: antialiased;
 }
 
 /* ── STATUS BAR ── */
@@ -32,40 +35,29 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 2rem;
-  height: 52px;
-  background: rgba(13, 13, 15, 0.95);
-  backdrop-filter: blur(20px);
+  height: 50px;
+  background: var(--surface);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
-  position: relative;
   z-index: 10;
-}
-.tesla-statusbar::after {
-  content: "";
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--accent), transparent);
-  opacity: 0.5;
 }
 .tsb-left {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 1.5rem;
 }
 .tsb-time {
-  font-family: "Share Tech Mono", monospace;
-  font-size: 1.35rem;
+  font-family: "Roboto Mono", monospace;
+  font-size: 1.1rem;
+  font-weight: 400;
   color: var(--text);
-  letter-spacing: 0.05em;
+  letter-spacing: 0.02em;
 }
 .tsb-date {
-  font-size: 0.95rem;
+  font-size: 0.78rem;
   color: var(--muted);
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-weight: 400;
+  letter-spacing: 0.04em;
 }
 .tsb-center {
   display: flex;
@@ -74,184 +66,217 @@
 .tsb-battery {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.75rem;
 }
 .tsb-bat-pct {
-  font-family: "Share Tech Mono", monospace;
-  font-size: 1.05rem;
+  font-family: "Roboto Mono", monospace;
+  font-size: 0.88rem;
   color: var(--green);
+  font-weight: 500;
 }
 .tsb-bat-bar {
-  width: 80px;
-  height: 4px;
-  background: rgba(255, 255, 255, 0.1);
+  width: 60px;
+  height: 3px;
+  background: var(--border);
   border-radius: 2px;
   overflow: hidden;
 }
 .tsb-bat-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--green), #4ade80);
+  background: var(--green);
   border-radius: 2px;
   transition: width 0.5s;
 }
 .tsb-range {
-  font-size: 0.95rem;
+  font-size: 0.78rem;
   color: var(--muted);
 }
 .tsb-right {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 1rem;
 }
 .tsb-speed {
-  font-family: "Share Tech Mono", monospace;
-  font-size: 1.35rem;
+  font-family: "Roboto Mono", monospace;
+  font-size: 1.1rem;
+  font-weight: 400;
   color: var(--text);
 }
 .tsb-speed small {
-  font-size: 0.75rem;
+  font-size: 0.6rem;
   color: var(--muted);
+  margin-left: 1px;
 }
 .tsb-daynight {
   background: transparent;
   border: none;
-  font-size: 1.1rem;
+  font-size: 0.95rem;
   cursor: pointer;
-  padding: 0.2rem 0.5rem;
-  border-radius: 4px;
-  line-height: 1;
-  transition: transform 0.2s;
-  opacity: 0.7;
+  padding: 0.2rem;
+  opacity: 0.5;
+  transition: opacity 0.2s;
 }
 .tsb-daynight:hover {
-  transform: scale(1.2);
   opacity: 1;
 }
 
 /* ── MAIN LAYOUT ── */
 .tesla-main {
   display: grid;
-  grid-template-columns: 280px 1fr 200px;
+  grid-template-columns: 260px 1fr 180px;
   flex: 1;
   min-height: 0;
-  height: calc(100vh - 52px);
+  height: calc(100vh - 50px);
 }
 
 /* ── LEFT PANEL ── */
 .tesla-left {
   background: var(--surface);
   border-right: 1px solid var(--border);
-  padding: 1rem;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-  overflow-y: auto;
+  overflow: hidden;
 }
 .car-viz {
   width: 100%;
-  height: 300px;
+  height: 260px;
   position: relative;
   flex-shrink: 0;
 }
+
+/* PRND */
 .gear-selector {
   display: flex;
   justify-content: center;
-  gap: 0.6rem;
+  gap: 0.5rem;
+  padding: 0 1.5rem;
 }
 .gear-btn {
-  width: 46px;
-  height: 46px;
-  border-radius: 50%;
+  flex: 1;
+  height: 36px;
+  border-radius: 4px;
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: none;
   color: var(--muted);
-  font-family: "Share Tech Mono", monospace;
-  font-size: 1.05rem;
+  font-family: "Roboto Mono", monospace;
+  font-size: 0.9rem;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.15s;
+  letter-spacing: 0.08em;
 }
 .gear-btn:hover {
-  border-color: var(--accent);
   color: var(--text);
-  background: rgba(232, 33, 39, 0.08);
 }
 .gear-btn.active {
   background: var(--accent);
-  border-color: var(--accent);
   color: #fff;
-  box-shadow: 0 0 20px var(--accent-glow);
+  border-radius: 4px;
 }
 
+/* CLIMATE */
 .climate-panel {
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 1rem 1rem 1.1rem;
-  border-top: 2px solid rgba(232, 33, 39, 0.35);
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--border);
 }
 .climate-header {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  margin-bottom: 0.85rem;
+  margin-bottom: 0.75rem;
 }
 .climate-icon {
-  font-size: 1.1rem;
+  font-size: 0.9rem;
 }
 .climate-label {
-  font-size: 0.92rem;
-  letter-spacing: 0.15em;
+  font-size: 0.68rem;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--muted);
+  font-weight: 500;
   flex: 1;
 }
 .climate-toggle {
-  font-family: "Share Tech Mono", monospace;
-  font-size: 0.82rem;
-  padding: 0.25rem 0.65rem;
-  border-radius: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 0.65rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 3px;
+  border: 1px solid var(--subtle);
   background: transparent;
   color: var(--muted);
   cursor: pointer;
-  transition: all 0.2s;
-  letter-spacing: 0.08em;
+  transition: all 0.15s;
+  font-family: "Roboto Mono", monospace;
+  letter-spacing: 0.06em;
 }
 .climate-toggle.on {
-  background: rgba(61, 123, 213, 0.15);
-  border-color: var(--accent2);
-  color: var(--accent2);
+  border-color: #2a7ae4;
+  color: #2a7ae4;
+  background: rgba(42, 122, 228, 0.06);
 }
 .temp-control {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 1rem;
+  gap: 1.5rem;
 }
 .temp-btn {
-  width: 36px;
-  height: 36px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
-  background: var(--surface3);
+  background: var(--surface2);
   border: 1px solid var(--border);
-  color: var(--text);
-  font-size: 1.2rem;
+  color: var(--text2);
+  font-size: 1rem;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.15s;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 .temp-btn:hover {
-  border-color: var(--accent);
-  background: rgba(232, 33, 39, 0.08);
+  background: var(--subtle);
 }
 .temp-display {
-  font-family: "Share Tech Mono", monospace;
-  font-size: 1.8rem;
-  color: var(--accent2);
-  min-width: 80px;
-  text-align: center;
+  font-family: "Roboto Mono", monospace;
+  font-size: 1.6rem;
+  font-weight: 300;
+  color: var(--text);
+}
+
+/* LEFT NOW PLAYING */
+.left-now-playing {
+  margin: 0.75rem 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.65rem 0;
+  border-top: 1px solid var(--border);
+}
+.left-album-art {
+  width: 38px;
+  height: 38px;
+  border-radius: 4px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.left-track-info {
+  min-width: 0;
+}
+.left-track-name {
+  font-size: 0.78rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text);
+}
+.left-track-artist {
+  font-size: 0.68rem;
+  color: var(--muted);
+  margin-top: 0.1rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ── CENTER PANEL ── */
@@ -262,348 +287,164 @@
   background: var(--bg);
 }
 
+/* TABS */
 .center-tabs {
   display: flex;
-  background: rgba(13, 13, 15, 0.9);
-  backdrop-filter: blur(20px);
+  background: var(--surface);
   border-bottom: 1px solid var(--border);
   flex-shrink: 0;
-  padding: 0 0.5rem;
-  gap: 0.25rem;
+  padding: 0 1rem;
 }
 .center-tab {
-  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.15rem;
-  padding: 0.75rem 0.5rem;
+  gap: 0.1rem;
+  padding: 0.6rem 1.25rem;
   background: transparent;
   border: none;
   border-bottom: 2px solid transparent;
   color: var(--muted);
   cursor: pointer;
-  transition: all 0.2s;
-  font-family: "Rajdhani", sans-serif;
-  position: relative;
+  transition: all 0.15s;
+  font-family: "Inter", sans-serif;
 }
 .center-tab:hover {
-  color: var(--text);
+  color: var(--text2);
 }
 .center-tab.active {
-  color: var(--accent);
-  border-bottom-color: var(--accent);
-}
-.center-tab.active::after {
-  content: "";
-  position: absolute;
-  bottom: -1px;
-  left: 25%;
-  right: 25%;
-  height: 2px;
-  background: var(--accent);
-  filter: blur(4px);
+  color: var(--text);
+  border-bottom-color: var(--text);
 }
 .tab-icon {
-  font-size: 1.2rem;
+  font-size: 0.95rem;
 }
 .tab-label {
-  font-size: 0.8rem;
-  letter-spacing: 0.14em;
+  font-size: 0.58rem;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
+  font-weight: 500;
 }
 
 .panel {
   flex: 1;
   overflow-y: auto;
-  padding: 1.25rem 1.25rem 5rem;
+  padding: 1.5rem 1.5rem 5rem;
   scrollbar-width: thin;
   scrollbar-color: var(--border) transparent;
 }
 
-/* ── HOME PANEL ── */
+/* ── HOME — clean stats, no boxes ── */
 .home-panel {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0;
 }
-.home-grid {
+
+.home-stats-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.65rem;
+  grid-template-columns: 1fr 1fr 1fr 1fr;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 1rem;
 }
-.home-card {
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  padding: 1.1rem 1rem;
-  transition: all 0.25s;
-  position: relative;
-  overflow: hidden;
+.home-stat {
+  padding: 1rem 0.5rem;
+  border-right: 1px solid var(--border);
+  text-align: center;
 }
-.home-card::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: linear-gradient(90deg, var(--accent), transparent);
-  opacity: 0;
-  transition: opacity 0.25s;
+.home-stat:last-child {
+  border-right: none;
 }
-.home-card:hover {
-  background: var(--surface3);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-  transform: translateY(-1px);
-}
-.home-card:hover::before {
-  opacity: 1;
-}
-.hc-label {
-  font-size: 0.85rem;
-  letter-spacing: 0.18em;
+.hs-label {
+  font-size: 0.6rem;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--muted);
-  margin-bottom: 0.4rem;
+  font-weight: 500;
+  margin-bottom: 0.35rem;
 }
-.hc-value {
-  font-family: "Share Tech Mono", monospace;
-  font-size: 2.6rem;
+.hs-value {
+  font-family: "Roboto Mono", monospace;
+  font-size: 1.6rem;
+  font-weight: 300;
   color: var(--text);
   line-height: 1;
 }
-.hc-value span {
-  font-size: 1rem;
+.hs-value span {
+  font-size: 0.7rem;
   color: var(--muted);
-  margin-left: 2px;
+  margin-left: 1px;
 }
-.hc-sub {
-  font-size: 0.82rem;
+.hs-sub {
+  font-size: 0.65rem;
   color: var(--muted);
-  margin-top: 0.3rem;
+  margin-top: 0.25rem;
 }
+
 .battery-bar-full {
-  height: 3px;
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 2px;
+  height: 2px;
+  background: var(--border);
+  border-radius: 1px;
   overflow: hidden;
-  margin: 0.5rem 0 0.3rem;
+  margin: 0.35rem 0 0;
 }
 .battery-bar-fill {
   height: 100%;
-  background: linear-gradient(90deg, var(--green), #4ade80);
-  border-radius: 2px;
+  background: var(--green);
+  border-radius: 1px;
   transition: width 0.5s;
-}
-.lock-icon {
-  font-size: 1.9rem;
-  margin: 0.2rem 0;
 }
 .bright-slider {
   width: 100%;
-  accent-color: var(--accent);
-  margin: 0.5rem 0 0.3rem;
+  accent-color: var(--text);
+  margin: 0.4rem 0 0;
   cursor: pointer;
+  height: 2px;
 }
 
 /* HOME MINI MAP */
 .home-map-section {
-  border-radius: 14px;
+  border-radius: 8px;
   overflow: hidden;
   border: 1px solid var(--border);
   flex-shrink: 0;
+  box-shadow: var(--shadow-sm);
 }
 .home-map-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.65rem 1rem;
-  background: var(--surface2);
+  padding: 0.6rem 1rem;
+  background: var(--surface);
   border-bottom: 1px solid var(--border);
 }
 .home-map-label {
-  font-size: 0.82rem;
+  font-size: 0.72rem;
   color: var(--muted);
-  letter-spacing: 0.06em;
-  font-family: "Share Tech Mono", monospace;
+  font-family: "Roboto Mono", monospace;
 }
 .home-map-nav-btn {
-  background: var(--accent);
+  background: var(--text);
   border: none;
-  border-radius: 6px;
+  border-radius: 4px;
   color: #fff;
-  font-family: "Rajdhani", sans-serif;
-  font-size: 0.82rem;
-  font-weight: 700;
-  padding: 0.3rem 0.85rem;
+  font-size: 0.68rem;
+  font-weight: 500;
+  padding: 0.25rem 0.75rem;
   cursor: pointer;
-  transition: all 0.2s;
-  letter-spacing: 0.06em;
+  transition: opacity 0.15s;
+  letter-spacing: 0.04em;
 }
 .home-map-nav-btn:hover {
-  box-shadow: 0 0 14px var(--accent-glow);
-  transform: translateY(-1px);
+  opacity: 0.8;
 }
 .home-mini-map {
   width: 100%;
-  height: 200px;
+  height: 220px;
   z-index: 0;
 }
 
-/* ── PERSISTENT MUSIC BAR ── */
-.music-bar {
-  display: grid;
-  grid-template-columns: 1fr 2fr 1fr;
-  align-items: center;
-  gap: 1rem;
-  padding: 0 1.5rem;
-  height: 72px;
-  background: var(--surface);
-  border-top: 1px solid var(--border);
-  cursor: default;
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  z-index: 500;
-  backdrop-filter: blur(20px);
-}
-.music-bar::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--green), transparent);
-  opacity: 0.35;
-}
-.music-bar-left {
-  display: flex;
-  align-items: center;
-  gap: 0.85rem;
-  min-width: 0;
-  cursor: pointer;
-}
-.music-bar-left:hover .music-bar-title {
-  color: var(--green);
-}
-.music-bar-art {
-  width: 48px;
-  height: 48px;
-  border-radius: 6px;
-  object-fit: cover;
-  flex-shrink: 0;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
-}
-.music-bar-info {
-  min-width: 0;
-}
-.music-bar-title {
-  font-size: 0.92rem;
-  font-weight: 700;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  color: var(--text);
-  transition: color 0.2s;
-}
-.music-bar-artist {
-  font-size: 0.78rem;
-  color: var(--muted);
-  margin-top: 0.1rem;
-}
-.music-bar-center {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.4rem;
-}
-.music-bar-controls {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-.music-bar-btn {
-  background: transparent;
-  border: none;
-  color: var(--muted);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.3rem;
-  border-radius: 50%;
-  transition:
-    color 0.15s,
-    transform 0.1s;
-}
-.music-bar-btn:hover {
-  color: var(--text);
-  transform: scale(1.1);
-}
-.mbc-icon {
-  width: 32px;
-  height: 32px;
-}
-.mbc-active {
-  color: var(--green) !important;
-}
-.mbc-play {
-  width: 36px;
-  height: 36px;
-  background: var(--text) !important;
-  color: #000 !important;
-  border-radius: 50%;
-  transition:
-    transform 0.1s,
-    background 0.15s !important;
-}
-.mbc-play:hover {
-  transform: scale(1.06) !important;
-  background: #e0e0e0 !important;
-}
-.music-bar-progress {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  width: 100%;
-}
-.music-bar-time {
-  font-family: "Share Tech Mono", monospace;
-  font-size: 0.68rem;
-  color: var(--muted);
-  flex-shrink: 0;
-  width: 32px;
-}
-.music-bar-time:last-child {
-  text-align: right;
-}
-.music-bar-track {
-  flex: 1;
-  height: 4px;
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 2px;
-  overflow: hidden;
-}
-.music-bar-fill {
-  height: 100%;
-  background: var(--text);
-  border-radius: 2px;
-  transition: width 0.5s linear;
-}
-.music-bar-track:hover .music-bar-fill {
-  background: var(--green);
-}
-.music-bar-right {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 0.5rem;
-}
-
-/* MUSIC PANEL */
+/* ── MUSIC PANEL ── */
 .music-panel {
   display: flex;
   flex-direction: column;
@@ -626,80 +467,73 @@
   margin-bottom: 0.5rem;
 }
 .spotify-title {
-  font-size: 1.7rem;
-  font-weight: 700;
+  font-size: 1.2rem;
+  font-weight: 500;
 }
 .spotify-desc {
-  font-size: 1.05rem;
+  font-size: 0.82rem;
   color: var(--muted);
-  max-width: 260px;
+  max-width: 240px;
   line-height: 1.6;
 }
 .spotify-btn {
   background: var(--green);
-  color: #000;
+  color: #fff;
   border: none;
-  border-radius: 25px;
-  padding: 0.85rem 2rem;
-  font-family: "Rajdhani", sans-serif;
-  font-weight: 700;
-  font-size: 1.05rem;
-  letter-spacing: 0.08em;
+  border-radius: 24px;
+  padding: 0.7rem 2rem;
+  font-weight: 500;
+  font-size: 0.85rem;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: opacity 0.15s;
   margin-top: 0.5rem;
 }
 .spotify-btn:hover {
-  transform: scale(1.04);
-  box-shadow: 0 4px 20px rgba(29, 185, 84, 0.4);
+  opacity: 0.85;
 }
 
 /* NAV PANEL */
 .nav-panel {
-  padding: 0.85rem 1rem;
+  padding: 1rem 1.5rem;
   flex: 0 0 auto;
 }
 .nav-search-row {
   display: flex;
-  gap: 0.6rem;
-  flex-shrink: 0;
+  gap: 0.5rem;
 }
 .nav-input {
   flex: 1;
-  background: var(--surface2);
+  background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 0.7rem 1rem;
+  border-radius: 6px;
+  padding: 0.65rem 1rem;
   color: var(--text);
-  font-family: "Rajdhani", sans-serif;
-  font-size: 1.05rem;
+  font-size: 0.88rem;
   outline: none;
-  transition: border-color 0.2s;
+  transition: border-color 0.15s;
+  font-family: "Inter", sans-serif;
 }
 .nav-input:focus {
-  border-color: var(--accent);
-  background: var(--surface3);
+  border-color: var(--text);
 }
 .nav-go {
-  background: var(--accent);
+  background: var(--text);
   border: none;
-  border-radius: 8px;
-  padding: 0.7rem 1.4rem;
+  border-radius: 6px;
+  padding: 0.65rem 1.25rem;
   color: #fff;
-  font-family: "Rajdhani", sans-serif;
-  font-weight: 700;
-  font-size: 1.05rem;
+  font-weight: 500;
+  font-size: 0.88rem;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: opacity 0.15s;
 }
 .nav-go:hover {
-  box-shadow: 0 0 16px var(--accent-glow);
-  transform: translateY(-1px);
+  opacity: 0.8;
 }
 .leaflet-map {
   flex: 1;
   min-height: 340px;
-  border-radius: 12px;
+  border-radius: 8px;
   overflow: hidden;
   border: 1px solid var(--border);
   z-index: 0;
@@ -708,24 +542,21 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  background: rgba(232, 33, 39, 0.08);
-  border: 1px solid rgba(232, 33, 39, 0.25);
-  border-radius: 8px;
-  padding: 0.55rem 0.75rem;
-  flex-shrink: 0;
+  padding: 0.6rem 0;
   margin-top: 0.5rem;
+  border-bottom: 1px solid var(--border);
 }
 .nav-dest-label {
-  font-size: 0.75rem;
-  letter-spacing: 0.12em;
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--muted);
 }
 .nav-dest-name {
   flex: 1;
-  font-size: 1.05rem;
-  color: var(--accent);
-  font-weight: 600;
+  font-size: 0.88rem;
+  color: var(--text);
+  font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -735,197 +566,306 @@
   border: none;
   color: var(--muted);
   cursor: pointer;
-  font-size: 0.95rem;
-  padding: 0.1rem 0.3rem;
-  transition: color 0.2s;
+  font-size: 0.75rem;
+  transition: color 0.15s;
 }
 .nav-clear:hover {
-  color: var(--accent);
+  color: var(--text);
 }
 .nav-history {
   display: flex;
   flex-direction: column;
-  gap: 0.3rem;
-  flex-shrink: 0;
+  gap: 0;
   margin-top: 0.5rem;
 }
 .nav-history-item {
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 0.6rem 0.75rem;
-  color: var(--muted);
-  font-size: 1.02rem;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  padding: 0.65rem 0;
+  color: var(--text2);
+  font-size: 0.85rem;
   text-align: left;
   cursor: pointer;
-  transition: all 0.2s;
-  font-family: "Rajdhani", sans-serif;
+  transition: color 0.15s;
+  font-family: "Inter", sans-serif;
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 .nav-history-item:hover {
   color: var(--text);
-  border-color: var(--accent);
-  background: rgba(232, 33, 39, 0.05);
 }
 
 /* SETTINGS */
 .settings-panel {
   display: flex;
   flex-direction: column;
-  gap: 0;
 }
 .setting-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1rem 0;
+  padding: 0.9rem 0;
   border-bottom: 1px solid var(--border);
 }
 .setting-row:last-child {
   border-bottom: none;
 }
 .setting-label {
-  font-size: 1.1rem;
-  color: var(--muted);
+  font-size: 0.88rem;
+  color: var(--text2);
+  font-weight: 400;
 }
 .setting-value {
-  font-family: "Share Tech Mono", monospace;
-  font-size: 1.05rem;
-  color: var(--text);
+  font-family: "Roboto Mono", monospace;
+  font-size: 0.82rem;
+  color: var(--muted);
 }
 .setting-mode-btn {
-  background: var(--surface3);
+  background: var(--surface2);
   border: 1px solid var(--border);
-  border-radius: 6px;
-  color: var(--text);
-  font-family: "Share Tech Mono", monospace;
-  font-size: 0.95rem;
-  padding: 0.35rem 0.85rem;
+  border-radius: 4px;
+  color: var(--text2);
+  font-size: 0.78rem;
+  padding: 0.3rem 0.75rem;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.15s;
 }
 .setting-mode-btn:hover {
-  border-color: var(--accent);
-  color: var(--accent);
+  background: var(--subtle);
 }
 
 /* ── RIGHT PANEL ── */
 .tesla-right {
   background: var(--surface);
   border-left: 1px solid var(--border);
-  padding: 1.5rem 0.75rem;
+  padding: 1.5rem 1rem;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  align-items: center;
+  gap: 0;
+  align-items: stretch;
 }
 .right-time {
   text-align: center;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 1.25rem;
 }
 .rt-time {
-  font-family: "Share Tech Mono", monospace;
-  font-size: 1.9rem;
+  font-family: "Roboto Mono", monospace;
+  font-size: 2rem;
+  font-weight: 300;
   color: var(--text);
   line-height: 1;
-  letter-spacing: 0.05em;
 }
 .rt-date {
-  font-size: 0.88rem;
+  font-size: 0.65rem;
   color: var(--muted);
-  margin-top: 0.2rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  margin-top: 0.3rem;
+  letter-spacing: 0.06em;
 }
 .right-stats {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  width: 100%;
+  gap: 0;
 }
 .rstat {
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 0.85rem 0.5rem;
-  text-align: center;
-  transition: all 0.2s;
-  position: relative;
-  overflow: hidden;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
-.rstat::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: var(--accent);
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-.rstat:hover {
-  background: var(--surface3);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
-}
-.rstat:hover::before {
-  opacity: 1;
+.rstat:last-child {
+  border-bottom: none;
 }
 .rstat-icon {
-  font-size: 1.1rem;
-  margin-bottom: 0.2rem;
-}
-.rstat-val {
-  font-family: "Share Tech Mono", monospace;
-  font-size: 1.45rem;
-  color: var(--accent);
-  line-height: 1;
+  font-size: 0.85rem;
+  color: var(--muted);
 }
 .rstat-label {
-  font-size: 0.78rem;
-  letter-spacing: 0.14em;
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   color: var(--muted);
-  margin-top: 0.2rem;
+  font-weight: 500;
+  flex: 1;
+  margin-left: 0.5rem;
+}
+.rstat-val {
+  font-family: "Roboto Mono", monospace;
+  font-size: 1rem;
+  font-weight: 400;
+  color: var(--text);
 }
 .right-gear {
-  width: 100%;
+  margin-top: auto;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  text-align: center;
 }
 .gear-display {
-  background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 0.85rem 0.5rem;
-  text-align: center;
 }
 .gear-label {
   display: block;
-  font-size: 0.78rem;
+  font-size: 0.58rem;
   letter-spacing: 0.14em;
   text-transform: uppercase;
   color: var(--muted);
-  margin-bottom: 0.2rem;
+  margin-bottom: 0.15rem;
 }
 .gear-value {
-  font-family: "Share Tech Mono", monospace;
-  font-size: 2.9rem;
+  font-family: "Roboto Mono", monospace;
+  font-size: 3rem;
+  font-weight: 300;
   color: var(--accent);
   line-height: 1;
-  text-shadow: 0 0 20px var(--accent-glow);
 }
 .tesla-back {
-  margin-top: auto;
-  font-size: 0.82rem;
-  letter-spacing: 0.12em;
+  margin-top: 1rem;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--muted);
   text-decoration: none;
-  transition: color 0.2s;
-  font-family: "Share Tech Mono", monospace;
+  transition: color 0.15s;
+  text-align: center;
+  font-family: "Roboto Mono", monospace;
 }
 .tesla-back:hover {
-  color: var(--accent);
+  color: var(--text);
+}
+
+/* ── PERSISTENT MUSIC BAR ── */
+.music-bar {
+  display: grid;
+  grid-template-columns: 1fr 2fr 1fr;
+  align-items: center;
+  gap: 1rem;
+  padding: 0 1.5rem;
+  height: 68px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 500;
+}
+.music-bar-left {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+  cursor: pointer;
+}
+.music-bar-left:hover .music-bar-title {
+  color: var(--muted);
+}
+.music-bar-art {
+  width: 42px;
+  height: 42px;
+  border-radius: 4px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+.music-bar-info {
+  min-width: 0;
+}
+.music-bar-title {
+  font-size: 0.82rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text);
+  transition: color 0.15s;
+}
+.music-bar-artist {
+  font-size: 0.7rem;
+  color: var(--muted);
+  margin-top: 0.1rem;
+}
+.music-bar-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+}
+.music-bar-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.music-bar-btn {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem;
+  border-radius: 50%;
+  transition: color 0.15s;
+}
+.music-bar-btn:hover {
+  color: var(--text);
+}
+.mbc-icon {
+  width: 30px;
+  height: 30px;
+}
+.mbc-active {
+  color: var(--text) !important;
+}
+.mbc-play {
+  width: 32px;
+  height: 32px;
+  background: var(--text) !important;
+  color: var(--bg) !important;
+  border-radius: 50%;
+  transition: opacity 0.15s !important;
+}
+.mbc-play:hover {
+  opacity: 0.75 !important;
+}
+.music-bar-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  width: 100%;
+}
+.music-bar-time {
+  font-family: "Roboto Mono", monospace;
+  font-size: 0.62rem;
+  color: var(--muted);
+  flex-shrink: 0;
+  width: 28px;
+}
+.music-bar-time:last-child {
+  text-align: right;
+}
+.music-bar-track {
+  flex: 1;
+  height: 2px;
+  background: var(--border);
+  border-radius: 1px;
+  overflow: hidden;
+  cursor: pointer;
+}
+.music-bar-fill {
+  height: 100%;
+  background: var(--text);
+  border-radius: 1px;
+  transition: width 0.5s linear;
+}
+.music-bar-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.5rem;
 }
 
 /* ── LOADING ── */
@@ -934,22 +874,22 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1.5rem;
+  gap: 1rem;
 }
 .loading-spinner {
-  width: 48px;
-  height: 48px;
-  border: 2px solid rgba(255, 255, 255, 0.08);
-  border-top-color: var(--accent);
+  width: 36px;
+  height: 36px;
+  border: 1px solid var(--border);
+  border-top-color: var(--text);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
 .loading-text {
-  font-family: "Share Tech Mono", monospace;
-  font-size: 0.95rem;
-  letter-spacing: 0.2em;
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
   color: var(--muted);
   text-transform: uppercase;
+  font-family: "Roboto Mono", monospace;
 }
 @keyframes spin {
   to {
@@ -959,18 +899,18 @@
 
 /* ── LEAFLET ── */
 .leaflet-popup-content-wrapper {
-  background: var(--surface2) !important;
+  background: var(--surface) !important;
   color: var(--text) !important;
   border: 1px solid var(--border) !important;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6) !important;
-  border-radius: 10px !important;
+  box-shadow: var(--shadow-md) !important;
+  border-radius: 8px !important;
 }
 .leaflet-popup-tip {
-  background: var(--surface2) !important;
+  background: var(--surface) !important;
 }
 .leaflet-popup-content {
-  font-family: "Rajdhani", sans-serif !important;
-  font-size: 1rem !important;
+  font-family: "Inter", sans-serif !important;
+  font-size: 0.82rem !important;
 }
 
 /* ── BRIGHTNESS OVERLAY ── */
@@ -985,131 +925,32 @@
   transition: opacity 0.2s ease;
 }
 
-/* ── LEFT NOW PLAYING ── */
-.left-now-playing {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
+/* ── NIGHT MODE ── */
+.tesla-wrapper.night-mode {
+  --bg: #141414;
+  --surface: #1c1c1e;
+  --surface2: #242426;
+  --text: #f0f0f0;
+  --text2: #c0c0c0;
+  --muted: #666;
+  --subtle: #444;
+  --border: rgba(255, 255, 255, 0.08);
+  --shadow-sm: 0 1px 4px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 20px rgba(0, 0, 0, 0.4);
+}
+.tesla-wrapper.night-mode .nav-input {
   background: var(--surface2);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 0.75rem;
-  border-top: 2px solid rgba(29, 185, 84, 0.35);
-}
-.left-album-art {
-  width: 52px;
-  height: 52px;
-  border-radius: 8px;
-  object-fit: cover;
-  flex-shrink: 0;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
-}
-.left-track-info {
-  min-width: 0;
-}
-.left-track-name {
-  font-size: 0.88rem;
-  font-weight: 700;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
   color: var(--text);
 }
-.left-track-artist {
-  font-size: 0.75rem;
-  color: var(--muted);
-  margin-top: 0.15rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.tesla-wrapper.night-mode .home-mini-map {
+  filter: brightness(0.85);
 }
-
-/* ── DAY MODE ── */
-.tesla-wrapper.day-mode {
-  --bg: #e8eaed;
-  --surface: #f0f2f5;
-  --surface2: #ffffff;
-  --surface3: #f8f9fa;
-  --text: #0d0d0f;
-  --muted: #6b7280;
-  --border: rgba(0, 0, 0, 0.08);
-  --glass: rgba(0, 0, 0, 0.03);
-  --shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+.tesla-wrapper.night-mode .leaflet-map {
+  filter: brightness(0.7) invert(0.9) hue-rotate(180deg);
 }
-.tesla-wrapper.day-mode .tesla-statusbar {
-  background: rgba(232, 234, 237, 0.95);
-  border-bottom-color: rgba(0, 0, 0, 0.08);
-}
-.tesla-wrapper.day-mode .tesla-statusbar::after {
-  opacity: 0.3;
-}
-.tesla-wrapper.day-mode .center-tabs {
-  background: rgba(232, 234, 237, 0.95);
-  border-bottom-color: rgba(0, 0, 0, 0.08);
-}
-.tesla-wrapper.day-mode .home-card {
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
-}
-.tesla-wrapper.day-mode .home-card:hover {
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-}
-.tesla-wrapper.day-mode .rstat {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-}
-.tesla-wrapper.day-mode .nav-input {
-  background: #fff;
-  color: var(--text);
-  border-color: rgba(0, 0, 0, 0.12);
-}
-.tesla-wrapper.day-mode .nav-input:focus {
-  border-color: var(--accent);
-}
-.tesla-wrapper.day-mode .nav-history-item {
-  background: #fff;
-  border-color: rgba(0, 0, 0, 0.08);
-}
-.tesla-wrapper.day-mode .leaflet-map {
-  filter: invert(0.88) hue-rotate(180deg) brightness(1.05);
-}
-.tesla-wrapper.day-mode .tsb-time,
-.tesla-wrapper.day-mode .tsb-speed {
-  color: var(--text);
-}
-.tesla-wrapper.day-mode .gear-btn {
-  border-color: rgba(0, 0, 0, 0.12);
-  color: var(--muted);
-}
-.tesla-wrapper.day-mode .gear-btn.active {
-  background: var(--accent);
-  color: #fff;
-  border-color: var(--accent);
-}
-.tesla-wrapper.day-mode .music-bar {
-  background: #f0f2f5;
-  border-top-color: rgba(0, 0, 0, 0.08);
-}
-.tesla-wrapper.day-mode .music-bar-title {
-  color: #0d0d0f;
-}
-.tesla-wrapper.day-mode .music-bar-track {
-  background: rgba(0, 0, 0, 0.1);
-}
-.tesla-wrapper.day-mode .music-bar-fill {
-  background: #0d0d0f;
-}
-.tesla-wrapper.day-mode .mbc-play {
-  background: #0d0d0f !important;
-  color: #fff !important;
-}
-.tesla-wrapper.day-mode .home-map-section {
-  border-color: rgba(0, 0, 0, 0.08);
-}
-.tesla-wrapper.day-mode .home-map-header {
-  background: #f0f2f5;
-  border-bottom-color: rgba(0, 0, 0, 0.08);
-}
-.tesla-wrapper.day-mode .home-mini-map {
-  filter: invert(0.88) hue-rotate(180deg) brightness(1.05);
+.tesla-wrapper.night-mode .mbc-play {
+  background: var(--text) !important;
+  color: #000 !important;
 }
 
 @media (max-width: 900px) {

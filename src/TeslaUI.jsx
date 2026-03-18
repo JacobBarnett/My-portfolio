@@ -128,20 +128,21 @@ function createLeafletMap(container, opts = {}) {
     scrollWheelZoom:
       opts.scrollWheelZoom !== undefined ? opts.scrollWheelZoom : true,
   });
-  L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-    maxZoom: 19,
-  }).addTo(map);
+  L.tileLayer(
+    "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+    { maxZoom: 19 },
+  ).addTo(map);
   const icon = L.divIcon({
     className: "",
-    html: '<div style="width:12px;height:12px;background:#e82127;border-radius:50%;border:2px solid #fff;box-shadow:0 0 8px rgba(232,33,39,0.8);"></div>',
-    iconSize: [12, 12],
-    iconAnchor: [6, 6],
+    html: '<div style="width:10px;height:10px;background:#cc0000;border-radius:50%;border:2px solid #fff;box-shadow:0 0 6px rgba(0,0,0,0.3);"></div>',
+    iconSize: [10, 10],
+    iconAnchor: [5, 5],
   });
   L.marker([33.8868, -117.8878], { icon }).addTo(map);
   return map;
 }
 
-function MiniMap({ dayMode }) {
+function MiniMap({ nightMode }) {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
   const initialized = useRef(false);
@@ -189,10 +190,10 @@ function MiniMap({ dayMode }) {
   }, []);
   useEffect(() => {
     if (!mapRef.current) return;
-    mapRef.current.style.filter = dayMode
-      ? "invert(0.88) hue-rotate(180deg) brightness(1.05)"
+    mapRef.current.style.filter = nightMode
+      ? "brightness(0.7) invert(0.9) hue-rotate(180deg)"
       : "none";
-  }, [dayMode]);
+  }, [nightMode]);
   return <div ref={mapRef} className="home-mini-map" />;
 }
 
@@ -282,9 +283,9 @@ function NavMap({ destination, activePanel }) {
         mapInstanceRef.current.removeLayer(routeLayerRef.current);
       const destIcon = L.divIcon({
         className: "",
-        html: '<div style="width:14px;height:14px;background:#3a7bd5;border-radius:50%;border:2px solid #fff;box-shadow:0 0 10px rgba(58,123,213,0.8);"></div>',
-        iconSize: [14, 14],
-        iconAnchor: [7, 7],
+        html: '<div style="width:12px;height:12px;background:#2a7ae4;border-radius:50%;border:2px solid #fff;box-shadow:0 0 6px rgba(0,0,0,0.3);"></div>',
+        iconSize: [12, 12],
+        iconAnchor: [6, 6],
       });
       markerRef.current = L.marker(destLatLng, { icon: destIcon })
         .addTo(mapInstanceRef.current)
@@ -300,7 +301,6 @@ function NavMap({ destination, activePanel }) {
   return <div ref={mapRef} className="leaflet-map" />;
 }
 
-// ── SPOTIFY-STYLE MUSIC BAR ──
 function MusicBar({
   nowPlaying,
   isPlaying,
@@ -317,17 +317,14 @@ function MusicBar({
   onRepeat,
 }) {
   if (!token || !nowPlaying) return null;
-
   const pct = duration > 0 ? (progress / duration) * 100 : 0;
   const fmt = (ms) => {
     if (!ms) return "0:00";
     const s = Math.floor(ms / 1000);
     return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
   };
-
   return (
     <div className="music-bar">
-      {/* LEFT — track info */}
       <div className="music-bar-left" onClick={onOpenMusic}>
         <img
           src={nowPlaying.album?.images?.[2]?.url}
@@ -341,33 +338,26 @@ function MusicBar({
           </div>
         </div>
       </div>
-
-      {/* CENTER — controls + progress */}
       <div className="music-bar-center">
         <div className="music-bar-controls">
           <button
             className={`music-bar-btn mbc-icon ${shuffle ? "mbc-active" : ""}`}
             onClick={onShuffle}
-            title="Shuffle"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
               <path d="M16.069 15.5H14.14a5.75 5.75 0 0 1-4.363-2.013l-5.051-5.94A3.75 3.75 0 0 0 1.875 6H0v2h1.875a1.75 1.75 0 0 1 1.336.619l5.051 5.94A7.75 7.75 0 0 0 14.14 17.5h1.929l-1.065 1.065 1.414 1.414L19.847 16.5l-3.429-3.479-1.414 1.414L16.069 15.5zM0 16h1.875a1.75 1.75 0 0 0 1.336-.619l1.085-1.277 1.514 1.782-1.048 1.233A3.75 3.75 0 0 1 1.875 18H0v2zM16.069 8.5l-1.065-1.065 1.414-1.414L19.847 9.5l-3.429 3.479-1.414-1.414L16.069 10.5H14.14a1.75 1.75 0 0 0-1.336.619l-.547.644-1.514-1.782.547-.644A3.75 3.75 0 0 1 14.14 8.5h1.929z" />
             </svg>
           </button>
-          <button
-            className="music-bar-btn mbc-icon"
-            onClick={onPrev}
-            title="Previous"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <button className="music-bar-btn mbc-icon" onClick={onPrev}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
               <path d="M3.3 1a.7.7 0 0 1 .7.7v8.15l9.95-8.744a.75.75 0 0 1 1.25.562v19.064a.75.75 0 0 1-1.25.562L4 12.646V20.3a.7.7 0 0 1-1.4 0V1.7a.7.7 0 0 1 .7-.7z" />
             </svg>
           </button>
           <button className="music-bar-btn mbc-play" onClick={onPlayPause}>
             {isPlaying ? (
               <svg
-                width="18"
-                height="18"
+                width="16"
+                height="16"
                 viewBox="0 0 24 24"
                 fill="currentColor"
               >
@@ -375,8 +365,8 @@ function MusicBar({
               </svg>
             ) : (
               <svg
-                width="18"
-                height="18"
+                width="16"
+                height="16"
                 viewBox="0 0 24 24"
                 fill="currentColor"
               >
@@ -384,21 +374,16 @@ function MusicBar({
               </svg>
             )}
           </button>
-          <button
-            className="music-bar-btn mbc-icon"
-            onClick={onNext}
-            title="Next"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+          <button className="music-bar-btn mbc-icon" onClick={onNext}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
               <path d="M20.7 1a.7.7 0 0 1 .7.7v18.6a.7.7 0 0 1-1.4 0V12.646l-9.95 8.658A.75.75 0 0 1 8.8 20.74V1.562A.75.75 0 0 1 10.05 1l9.95 8.15V1.7a.7.7 0 0 1 .7-.7z" />
             </svg>
           </button>
           <button
             className={`music-bar-btn mbc-icon ${repeat !== "off" ? "mbc-active" : ""}`}
             onClick={onRepeat}
-            title="Repeat"
           >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
               <path d="M0 13.151a2.554 2.554 0 0 0 2.546 2.554h9.458v2l3.484-2.827-3.484-2.828v2H2.546A.554.554 0 0 1 2 13.15V6h6V4H2.546A2.554 2.554 0 0 0 0 6.554v6.597zm21.454-8.697H12v-2l-3.484 2.827L12 8.108v-2h9.454c.306 0 .546.24.546.546v7.096h-6v2h6A2.554 2.554 0 0 0 24 13.15V6.554a2.554 2.554 0 0 0-2.546-2.554v.454z" />
             </svg>
           </button>
@@ -411,10 +396,8 @@ function MusicBar({
           <span className="music-bar-time">{fmt(duration)}</span>
         </div>
       </div>
-
-      {/* RIGHT — volume placeholder */}
       <div className="music-bar-right">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="var(--muted)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--muted)">
           <path d="M12 3.75a.75.75 0 0 0-1.2-.6L5.55 7.5H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h3.55l5.25 4.35a.75.75 0 0 0 1.2-.6V3.75zm2.76 2.36a.75.75 0 0 1 1.06.04 8.5 8.5 0 0 1 0 11.7.75.75 0 1 1-1.1-1.02 7 7 0 0 0 0-9.66.75.75 0 0 1 .04-1.06z" />
         </svg>
       </div>
@@ -436,7 +419,7 @@ export default function TeslaUI() {
   const [acOn, setAcOn] = useState(true);
   const [gear, setGear] = useState("P");
   const [brightness, setBrightness] = useState(80);
-  const [dayMode, setDayMode] = useState(true);
+  const [nightMode, setNightMode] = useState(false);
   const [activePanel, setActivePanel] = useState("home");
   const [batteryPct] = useState(87);
   const [range] = useState(247);
@@ -511,7 +494,6 @@ export default function TeslaUI() {
     return () => clearInterval(interval);
   }, [token, fetchNowPlaying]);
 
-  // Progress ticker
   useEffect(() => {
     if (progressInterval.current) clearInterval(progressInterval.current);
     if (isPlaying) {
@@ -582,9 +564,10 @@ export default function TeslaUI() {
 
   return (
     <div
-      className={`tesla-wrapper${dayMode ? " day-mode" : ""}`}
+      className={`tesla-wrapper${nightMode ? " night-mode" : ""}`}
       style={{ "--brightness-overlay": `${((100 - brightness) / 100) * 0.85}` }}
     >
+      {/* STATUS BAR */}
       <div className="tesla-statusbar">
         <div className="tsb-left">
           <span className="tsb-time">{formatTime(time)}</span>
@@ -605,10 +588,9 @@ export default function TeslaUI() {
         <div className="tsb-right">
           <button
             className="tsb-daynight"
-            onClick={() => setDayMode((d) => !d)}
-            title={dayMode ? "Night Mode" : "Day Mode"}
+            onClick={() => setNightMode((n) => !n)}
           >
-            {dayMode ? "🌙" : "☀️"}
+            {nightMode ? "☀️" : "🌙"}
           </button>
           <span className="tsb-speed">
             0 <small>mph</small>
@@ -617,9 +599,10 @@ export default function TeslaUI() {
       </div>
 
       <div className="tesla-main">
+        {/* LEFT */}
         <div className="tesla-left">
           <div className="car-viz">
-            <TeslaModel3D dayMode={dayMode} />
+            <TeslaModel3D dayMode={!nightMode} />
           </div>
           <div className="gear-selector">
             {["R", "N", "D", "P"].map((g) => (
@@ -650,7 +633,7 @@ export default function TeslaUI() {
               >
                 −
               </button>
-              <span className="temp-display">{temp}°F</span>
+              <span className="temp-display">{temp}°</span>
               <button
                 className="temp-btn"
                 onClick={() => setTemp((t) => Math.min(85, t + 1))}
@@ -663,7 +646,7 @@ export default function TeslaUI() {
             <div className="left-now-playing">
               <img
                 src={nowPlaying.album?.images?.[1]?.url}
-                alt="album"
+                alt=""
                 className="left-album-art"
               />
               <div className="left-track-info">
@@ -676,6 +659,7 @@ export default function TeslaUI() {
           )}
         </div>
 
+        {/* CENTER */}
         <div className="tesla-center">
           <div className="center-tabs">
             {[
@@ -700,10 +684,11 @@ export default function TeslaUI() {
 
           {activePanel === "home" && (
             <div className="panel home-panel">
-              <div className="home-grid">
-                <div className="home-card">
-                  <div className="hc-label">Battery</div>
-                  <div className="hc-value">
+              {/* Clean inline stats — no boxes */}
+              <div className="home-stats-row">
+                <div className="home-stat">
+                  <div className="hs-label">Battery</div>
+                  <div className="hs-value">
                     {batteryPct}
                     <span>%</span>
                   </div>
@@ -713,25 +698,27 @@ export default function TeslaUI() {
                       style={{ width: `${batteryPct}%` }}
                     />
                   </div>
-                  <div className="hc-sub">{range} mi remaining</div>
+                  <div className="hs-sub">{range} mi</div>
                 </div>
-                <div className="home-card">
-                  <div className="hc-label">Doors</div>
-                  <div className="lock-icon">🔒</div>
-                  <div className="hc-sub">Locked</div>
-                </div>
-                <div className="home-card">
-                  <div className="hc-label">Interior</div>
-                  <div className="hc-value">
+                <div className="home-stat">
+                  <div className="hs-label">Interior</div>
+                  <div className="hs-value">
                     {temp}
                     <span>°F</span>
                   </div>
-                  <div className="hc-sub">
-                    {acOn ? "Climate On" : "Climate Off"}
+                  <div className="hs-sub">
+                    {acOn ? "Climate on" : "Climate off"}
                   </div>
                 </div>
-                <div className="home-card">
-                  <div className="hc-label">Brightness</div>
+                <div className="home-stat">
+                  <div className="hs-label">Doors</div>
+                  <div className="hs-value" style={{ fontSize: "1.4rem" }}>
+                    🔒
+                  </div>
+                  <div className="hs-sub">Locked</div>
+                </div>
+                <div className="home-stat">
+                  <div className="hs-label">Brightness</div>
                   <input
                     type="range"
                     min="10"
@@ -740,9 +727,11 @@ export default function TeslaUI() {
                     onChange={(e) => setBrightness(Number(e.target.value))}
                     className="bright-slider"
                   />
-                  <div className="hc-sub">{brightness}%</div>
+                  <div className="hs-sub">{brightness}%</div>
                 </div>
               </div>
+
+              {/* Map takes remaining space */}
               <div className="home-map-section">
                 <div className="home-map-header">
                   <span className="home-map-label">📍 Anaheim, CA</span>
@@ -753,10 +742,10 @@ export default function TeslaUI() {
                       setNavVisited(true);
                     }}
                   >
-                    Navigate →
+                    Navigate
                   </button>
                 </div>
-                <MiniMap dayMode={dayMode} />
+                <MiniMap nightMode={nightMode} />
               </div>
             </div>
           )}
@@ -768,23 +757,23 @@ export default function TeslaUI() {
                   <div className="spotify-logo">
                     <svg
                       viewBox="0 0 24 24"
-                      width="56"
-                      height="56"
-                      fill="#1DB954"
+                      width="48"
+                      height="48"
+                      fill="#33a852"
                     >
                       <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" />
                     </svg>
                   </div>
                   <h3 className="spotify-title">Connect Spotify</h3>
                   <p className="spotify-desc">
-                    Stream your music directly through the dashboard
+                    Stream music through your dashboard
                   </p>
                   <button className="spotify-btn" onClick={loginWithSpotify}>
-                    Connect Spotify
+                    Connect
                   </button>
                 </div>
               ) : (
-                <SpotifyPanel onDisconnect={logout} dayMode={dayMode} />
+                <SpotifyPanel onDisconnect={logout} dayMode={!nightMode} />
               )}
             </div>
           )}
@@ -794,7 +783,7 @@ export default function TeslaUI() {
               <div className="nav-search-row">
                 <input
                   className="nav-input"
-                  placeholder="Search destination..."
+                  placeholder="Where to?"
                   value={navInput}
                   onChange={(e) => setNavInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && handleNavGo()}
@@ -821,7 +810,7 @@ export default function TeslaUI() {
               )}
               {destination && (
                 <div className="nav-active-dest">
-                  <span className="nav-dest-label">Navigating to:</span>
+                  <span className="nav-dest-label">To</span>
                   <span className="nav-dest-name">{destination}</span>
                   <button
                     className="nav-clear"
@@ -840,18 +829,15 @@ export default function TeslaUI() {
           {activePanel === "settings" && (
             <div className="panel settings-panel">
               {[
-                { label: "Display Brightness", value: `${brightness}%` },
+                { label: "Brightness", value: `${brightness}%` },
                 { label: "Interior Temperature", value: `${temp}°F` },
-                {
-                  label: "Climate Control",
-                  value: acOn ? "Enabled" : "Disabled",
-                },
+                { label: "Climate Control", value: acOn ? "On" : "Off" },
                 {
                   label: "Spotify",
-                  value: token ? "Connected ✓" : "Not Connected",
+                  value: token ? "Connected" : "Not connected",
                 },
-                { label: "Software Version", value: "2024.44.25" },
-                { label: "Vehicle Name", value: "Model S" },
+                { label: "Software", value: "2024.44.25" },
+                { label: "Vehicle", value: "Model S" },
                 { label: "VIN", value: "5YJ3E1EA•••••••••" },
               ].map((s) => (
                 <div className="setting-row" key={s.label}>
@@ -860,12 +846,12 @@ export default function TeslaUI() {
                 </div>
               ))}
               <div className="setting-row">
-                <span className="setting-label">Display Mode</span>
+                <span className="setting-label">Display</span>
                 <button
                   className="setting-mode-btn"
-                  onClick={() => setDayMode((d) => !d)}
+                  onClick={() => setNightMode((n) => !n)}
                 >
-                  {dayMode ? "☀️ Day" : "🌙 Night"}
+                  {nightMode ? "Day mode" : "Night mode"}
                 </button>
               </div>
             </div>
@@ -877,8 +863,8 @@ export default function TeslaUI() {
                 display: activePanel === "nav" ? "flex" : "none",
                 flexDirection: "column",
                 overflow: "hidden",
-                padding: "0 1rem 1rem",
-                height: "540px",
+                padding: "0 1.5rem 1.5rem",
+                height: "500px",
               }}
             >
               <NavMap destination={destination} activePanel={activePanel} />
@@ -886,6 +872,7 @@ export default function TeslaUI() {
           )}
         </div>
 
+        {/* RIGHT */}
         <div className="tesla-right">
           <div className="right-time">
             <div className="rt-time">{formatTime(time)}</div>
@@ -899,19 +886,19 @@ export default function TeslaUI() {
           </div>
           <div className="right-stats">
             <div className="rstat">
-              <div className="rstat-icon">⚡</div>
-              <div className="rstat-val">{batteryPct}%</div>
-              <div className="rstat-label">Battery</div>
+              <span className="rstat-icon">⚡</span>
+              <span className="rstat-label">Battery</span>
+              <span className="rstat-val">{batteryPct}%</span>
             </div>
             <div className="rstat">
-              <div className="rstat-icon">📍</div>
-              <div className="rstat-val">{range}</div>
-              <div className="rstat-label">Range (mi)</div>
+              <span className="rstat-icon">🗺</span>
+              <span className="rstat-label">Range</span>
+              <span className="rstat-val">{range} mi</span>
             </div>
             <div className="rstat">
-              <div className="rstat-icon">🌡</div>
-              <div className="rstat-val">{temp}°</div>
-              <div className="rstat-label">Cabin</div>
+              <span className="rstat-icon">🌡</span>
+              <span className="rstat-label">Cabin</span>
+              <span className="rstat-val">{temp}°</span>
             </div>
           </div>
           <div className="right-gear">
@@ -926,7 +913,6 @@ export default function TeslaUI() {
         </div>
       </div>
 
-      {/* FIXED MUSIC BAR */}
       <MusicBar
         nowPlaying={nowPlaying}
         isPlaying={isPlaying}
