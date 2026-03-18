@@ -58,14 +58,12 @@ body {
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border);
 }
-
 .nav-logo {
   font-family: "DM Serif Display", serif;
   font-size: 1.25rem;
   color: var(--accent);
   letter-spacing: 0.02em;
 }
-
 .nav-links {
   display: flex;
   gap: 2.5rem;
@@ -92,7 +90,6 @@ body {
   position: relative;
   overflow: hidden;
 }
-
 .hero-section::after {
   content: "";
   position: absolute;
@@ -104,7 +101,6 @@ body {
   border-radius: 50%;
   pointer-events: none;
 }
-
 .hero-inner {
   max-width: 900px;
   position: relative;
@@ -125,7 +121,6 @@ body {
   opacity: 0;
   animation: fadeUp 0.7s 0.1s ease forwards;
 }
-
 .hero-h1 {
   font-family: "DM Serif Display", serif;
   font-size: clamp(3.5rem, 8vw, 6.5rem);
@@ -135,12 +130,10 @@ body {
   opacity: 0;
   animation: fadeUp 0.7s 0.25s ease forwards;
 }
-
 .hero-h1 em {
   font-style: italic;
   color: var(--accent);
 }
-
 .hero-sub {
   margin-top: 1.75rem;
   font-size: 1.1rem;
@@ -150,7 +143,6 @@ body {
   opacity: 0;
   animation: fadeUp 0.7s 0.4s ease forwards;
 }
-
 .hero-cta {
   display: flex;
   gap: 1rem;
@@ -173,7 +165,6 @@ body {
   cursor: pointer;
   border: none;
 }
-
 .btn-primary {
   background: var(--accent);
   color: var(--navy);
@@ -183,7 +174,6 @@ body {
   transform: translateY(-2px);
   box-shadow: 0 8px 30px rgba(200, 169, 110, 0.3);
 }
-
 .btn-outline {
   background: transparent;
   color: var(--text);
@@ -224,7 +214,6 @@ body {
 .port-section {
   padding: 6rem 3rem;
 }
-
 .section-label {
   font-size: 0.75rem;
   font-weight: 500;
@@ -248,7 +237,6 @@ body {
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
 }
-
 .about-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -257,25 +245,21 @@ body {
   margin: 0 auto;
   align-items: center;
 }
-
 .about-text p {
   color: var(--muted);
   line-height: 1.85;
   font-size: 1.05rem;
   margin-bottom: 1.25rem;
 }
-
 .about-text p strong {
   color: var(--text);
   font-weight: 500;
 }
-
 .about-stats {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1.5rem;
 }
-
 .stat-card {
   background: var(--card);
   border: 1px solid var(--border);
@@ -300,7 +284,6 @@ body {
   height: 100%;
   background: var(--accent);
 }
-
 .stat-number {
   font-family: "DM Serif Display", serif;
   font-size: 2.5rem;
@@ -320,13 +303,11 @@ body {
   max-width: 1100px;
   margin: 0 auto;
 }
-
 .skills-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 1.5rem;
 }
-
 .skill-category {
   background: var(--card);
   border: 1px solid var(--border);
@@ -340,7 +321,6 @@ body {
   border-color: var(--accent);
   transform: translateY(-3px);
 }
-
 .skill-cat-title {
   font-size: 0.75rem;
   letter-spacing: 0.18em;
@@ -349,7 +329,6 @@ body {
   margin-bottom: 1.25rem;
   font-weight: 500;
 }
-
 .skill-tags {
   display: flex;
   flex-wrap: wrap;
@@ -377,12 +356,10 @@ body {
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
 }
-
 .projects-inner {
   max-width: 1100px;
   margin: 0 auto;
 }
-
 .projects-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
@@ -415,7 +392,6 @@ body {
   line-height: 1;
   pointer-events: none;
 }
-
 .project-tag {
   font-size: 0.72rem;
   letter-spacing: 0.18em;
@@ -424,21 +400,18 @@ body {
   font-weight: 500;
   margin-bottom: 0.75rem;
 }
-
 .project-title {
   font-family: "DM Serif Display", serif;
   font-size: 1.35rem;
   color: var(--text);
   margin-bottom: 0.75rem;
 }
-
 .project-desc {
   color: var(--muted);
   font-size: 0.9rem;
   line-height: 1.7;
   margin-bottom: 1.5rem;
 }
-
 .project-links {
   display: flex;
   gap: 0.75rem;
@@ -461,6 +434,141 @@ body {
   border-color: var(--accent);
 }
 
+/* Featured card */
+.project-card--featured {
+  border-color: var(--accent);
+  background: linear-gradient(
+    135deg,
+    rgba(17, 34, 64, 0.9),
+    rgba(29, 52, 96, 0.5)
+  );
+}
+.project-featured-badge {
+  display: inline-block;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--navy);
+  background: var(--accent);
+  padding: 0.2rem 0.65rem;
+  border-radius: 2px;
+  margin-bottom: 0.6rem;
+}
+.project-link--primary {
+  color: var(--accent) !important;
+  border-bottom-color: var(--accent) !important;
+  font-weight: 600;
+}
+
+/* ── SPACE / ASTEROID card ── */
+.project-card--space {
+  border-color: rgba(99, 179, 237, 0.25);
+  background: linear-gradient(
+    135deg,
+    rgba(8, 12, 30, 0.97) 0%,
+    rgba(12, 20, 48, 0.92) 100%
+  );
+}
+.project-card--space:hover {
+  border-color: rgba(99, 179, 237, 0.6);
+  box-shadow:
+    0 12px 40px rgba(99, 179, 237, 0.1),
+    0 0 0 1px rgba(99, 179, 237, 0.15);
+  transform: translateY(-5px);
+}
+.project-card--space .project-number {
+  color: rgba(99, 179, 237, 0.1);
+}
+.project-card--space .project-tag {
+  color: #63b3ed;
+}
+.project-featured-badge--space {
+  background: rgba(99, 179, 237, 0.12);
+  color: #90cdf4;
+  border: 1px solid rgba(99, 179, 237, 0.35);
+  /* override the default gold background */
+  padding: 0.2rem 0.65rem;
+  border-radius: 2px;
+  margin-bottom: 0.6rem;
+}
+.project-card--space .project-link--primary {
+  color: #63b3ed !important;
+  border-bottom-color: #63b3ed !important;
+}
+.project-card--space:hover .project-link--primary {
+  color: #90cdf4 !important;
+}
+
+/* ── GAMES ── */
+.games-section {
+  background: var(--navy);
+  border-top: 1px solid var(--border);
+}
+.games-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1rem;
+}
+.game-card {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1.5rem;
+  text-decoration: none;
+  color: var(--text);
+  transition:
+    transform 0.25s,
+    border-color 0.25s,
+    background 0.25s;
+}
+.game-card:hover {
+  transform: translateY(-3px);
+  border-color: var(--accent);
+  background: rgba(200, 169, 110, 0.06);
+}
+.game-icon {
+  font-size: 1.6rem;
+  min-width: 48px;
+  text-align: center;
+  letter-spacing: -4px;
+}
+.game-info {
+  flex: 1;
+}
+.game-title {
+  font-family: "DM Serif Display", serif;
+  font-size: 1.1rem;
+  margin-bottom: 0.3rem;
+}
+.game-desc {
+  font-size: 0.8rem;
+  color: var(--muted);
+  line-height: 1.6;
+  margin-bottom: 0.5rem;
+}
+.game-tag {
+  font-size: 0.65rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-weight: 500;
+}
+.game-arrow {
+  font-size: 1.2rem;
+  color: var(--muted);
+  transition:
+    color 0.2s,
+    transform 0.2s;
+}
+.game-card:hover .game-arrow {
+  color: var(--accent);
+  transform: translateX(4px);
+}
+
 /* ── CONTACT ── */
 .contact-section {
   text-align: center;
@@ -469,14 +577,12 @@ body {
   max-width: 680px;
   margin: 0 auto;
 }
-
 .contact-sub {
   color: var(--muted);
   font-size: 1rem;
   line-height: 1.75;
   margin-bottom: 2.5rem;
 }
-
 .contact-email {
   display: inline-block;
   font-family: "DM Serif Display", serif;
@@ -491,7 +597,6 @@ body {
 .contact-email:hover {
   border-color: var(--accent);
 }
-
 .social-links {
   display: flex;
   justify-content: center;
@@ -515,109 +620,6 @@ body {
 .social-link:hover {
   color: var(--accent);
   border-color: var(--accent);
-}
-
-/* ── FEATURED PROJECT CARD ── */
-.project-card--featured {
-  border-color: var(--accent);
-  background: linear-gradient(
-    135deg,
-    rgba(17, 34, 64, 0.9),
-    rgba(29, 52, 96, 0.5)
-  );
-}
-
-.project-featured-badge {
-  display: inline-block;
-  font-size: 0.62rem;
-  font-weight: 600;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--navy);
-  background: var(--accent);
-  padding: 0.2rem 0.65rem;
-  border-radius: 2px;
-  margin-bottom: 0.6rem;
-}
-
-.project-link--primary {
-  color: var(--accent) !important;
-  border-bottom-color: var(--accent) !important;
-  font-weight: 600;
-}
-
-/* ── GAMES SECTION ── */
-.games-section {
-  background: var(--navy);
-  border-top: 1px solid var(--border);
-}
-
-.games-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 1rem;
-}
-
-.game-card {
-  display: flex;
-  align-items: center;
-  gap: 1.25rem;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  padding: 1.5rem;
-  text-decoration: none;
-  color: var(--text);
-  transition:
-    transform 0.25s,
-    border-color 0.25s,
-    background 0.25s;
-}
-.game-card:hover {
-  transform: translateY(-3px);
-  border-color: var(--accent);
-  background: rgba(200, 169, 110, 0.06);
-}
-
-.game-icon {
-  font-size: 1.6rem;
-  min-width: 48px;
-  text-align: center;
-  letter-spacing: -4px;
-}
-
-.game-info {
-  flex: 1;
-}
-.game-title {
-  font-family: "DM Serif Display", serif;
-  font-size: 1.1rem;
-  margin-bottom: 0.3rem;
-}
-.game-desc {
-  font-size: 0.8rem;
-  color: var(--muted);
-  line-height: 1.6;
-  margin-bottom: 0.5rem;
-}
-.game-tag {
-  font-size: 0.65rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--accent);
-  font-weight: 500;
-}
-
-.game-arrow {
-  font-size: 1.2rem;
-  color: var(--muted);
-  transition:
-    color 0.2s,
-    transform 0.2s;
-}
-.game-card:hover .game-arrow {
-  color: var(--accent);
-  transform: translateX(4px);
 }
 
 /* ── FOOTER ── */

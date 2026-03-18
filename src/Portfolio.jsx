@@ -2,7 +2,6 @@ import { useEffect } from "react";
 import "./Portfolio.css";
 
 export default function Portfolio() {
-  // Scroll reveal effect
   useEffect(() => {
     const revealEls = document.querySelectorAll(".reveal");
     const observer = new IntersectionObserver(
@@ -248,6 +247,43 @@ export default function Portfolio() {
                 </a>
               </div>
             </div>
+
+            {/* AstroForge — Asteroid Target Dashboard */}
+            <div className="project-card project-card--space reveal">
+              <div className="project-number">03</div>
+              <div className="project-featured-badge project-featured-badge--space">
+                New
+              </div>
+              <div className="project-tag">
+                React · Three.js · NASA API · D3
+              </div>
+              <h3 className="project-title">Asteroid Mining Dashboard</h3>
+              <p className="project-desc">
+                A mission-planning tool built for deep-space asteroid mining.
+                Visualize real near-Earth asteroid orbits in 3D, filter
+                candidates by delta-v cost and estimated platinum-group metal
+                content, and identify optimal launch windows — powered by NASA's
+                live Small Body Database.
+              </p>
+              <div className="project-links">
+                <a
+                  href="/asteroids"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="project-link project-link--primary"
+                >
+                  Launch App →
+                </a>
+                <a
+                  href="https://github.com/JacobBarnett"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="project-link"
+                >
+                  GitHub →
+                </a>
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -340,7 +376,12 @@ export default function Portfolio() {
               </svg>
               LinkedIn
             </a>
-            <a href="https://github.com/JacobBarnett">
+            <a
+              href="/resume.pdf"
+              target="_blank"
+              rel="noreferrer"
+              className="social-link"
+            >
               <svg
                 width="14"
                 height="14"
