@@ -846,11 +846,15 @@
 .tesla-wrapper.day-mode .tsb-bat-fill {
   background: #1a1a1a;
 }
+.tesla-wrapper.day-mode .music-strip {
+  background: #e8e8e4;
+  border-top-color: rgba(0, 0, 0, 0.06);
+}
 .tesla-wrapper.day-mode .music-title {
   color: #1a1a1a;
 }
 .tesla-wrapper.day-mode .music-artist {
-  color: rgba(0, 0, 0, 0.4);
+  color: rgba(0, 0, 0, 0.5);
 }
 .tesla-wrapper.day-mode .music-ctrl-btn {
   color: rgba(0, 0, 0, 0.4);
@@ -858,6 +862,22 @@
 .tesla-wrapper.day-mode .music-ctrl-btn.play {
   background: #1a1a1a;
   color: #fff !important;
+}
+.tesla-wrapper.day-mode .music-extra-btn {
+  color: rgba(0, 0, 0, 0.35);
+}
+.tesla-wrapper.day-mode .music-extra-btn.active {
+  color: #1a1a1a;
+}
+.tesla-wrapper.day-mode .music-art-placeholder {
+  background: rgba(0, 0, 0, 0.08);
+  color: rgba(0, 0, 0, 0.3);
+}
+.tesla-wrapper.day-mode .music-progress-bar {
+  background: rgba(0, 0, 0, 0.1);
+}
+.tesla-wrapper.day-mode .music-progress-fill {
+  background: #1a1a1a;
 }
 .tesla-wrapper.day-mode .tb-btn {
   color: rgba(0, 0, 0, 0.4);
@@ -874,6 +894,13 @@
 }
 .tesla-wrapper.day-mode .tb-divider {
   background: rgba(0, 0, 0, 0.08);
+}
+.tesla-wrapper.day-mode .tb-vol-btn {
+  color: rgba(0, 0, 0, 0.4);
+}
+.tesla-wrapper.day-mode .tb-icon-white {
+  background: rgba(0, 0, 0, 0.08);
+  color: rgba(0, 0, 0, 0.6);
 }
 .tesla-wrapper.day-mode .map-nav-bar,
 .tesla-wrapper.day-mode .map-quick-btn,
@@ -898,12 +925,6 @@
   background: rgba(0, 0, 0, 0.05);
   color: #1a1a1a;
 }
-.tesla-wrapper.day-mode .map-dir-text {
-  color: rgba(0, 0, 0, 0.8);
-}
-.tesla-wrapper.day-mode .map-dir-dist {
-  color: rgba(0, 0, 0, 0.4);
-}
 .tesla-wrapper.day-mode .trip-eta {
   color: rgba(0, 0, 0, 0.6);
 }
@@ -921,13 +942,4 @@
 }
 .tesla-wrapper.day-mode .tesla-right {
   background: #e8e8e4;
-}
-.tesla-wrapper.day-mode .music-progress-bar {
-  background: rgba(0, 0, 0, 0.08);
-}
-.tesla-wrapper.day-mode .music-progress-fill {
-  background: #1a1a1a;
-}
-.tesla-wrapper.day-mode .music-art-placeholder {
-  background: rgba(0, 0, 0, 0.06);
 }
