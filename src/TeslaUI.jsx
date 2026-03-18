@@ -115,7 +115,6 @@ function waitForSize(el, maxMs = 3000) {
   });
 }
 
-// ── THE MAP — always visible on the right ──
 function MainMap({ destination, dayMode }) {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
@@ -165,7 +164,7 @@ function MainMap({ destination, dayMode }) {
       L.control.zoom({ position: "bottomright" }).addTo(map);
       const arrow = L.divIcon({
         className: "",
-        html: `<div style="width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:18px solid #e82127;transform:rotate(0deg);filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5));"></div>`,
+        html: `<div style="width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:18px solid #e82127;filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5));"></div>`,
         iconSize: [14, 18],
         iconAnchor: [7, 9],
       });
@@ -233,7 +232,6 @@ function MainMap({ destination, dayMode }) {
       markerRef.current = L.marker(destLatLng, { icon: destIcon }).addTo(
         mapInstanceRef.current,
       );
-      // Draw route line
       routeRef.current = L.polyline([[33.8868, -117.8878], destLatLng], {
         color: "#3b82f6",
         weight: 3,
@@ -267,17 +265,15 @@ export default function TeslaUI() {
   const [brightness, setBrightness] = useState(80);
   const [dayMode, setDayMode] = useState(false);
   const [batteryPct] = useState(87);
-  // eslint-disable-next-line
   const [range] = useState(247);
   const [navInput, setNavInput] = useState("");
   const [destination, setDestination] = useState("");
   const [navHistory, setNavHistory] = useState([]);
   const [showSpotify, setShowSpotify] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const progressInterval = useRef(null);
   const [showRange, setShowRange] = useState(false);
+  const progressInterval = useRef(null);
 
-  // OAuth
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const code = params.get("code");
@@ -304,7 +300,6 @@ export default function TeslaUI() {
     }
   }, []);
 
-  // Token expiry
   useEffect(() => {
     const interval = setInterval(() => {
       const expiry = localStorage.getItem("spotify_expires");
@@ -384,7 +379,6 @@ export default function TeslaUI() {
     setNowPlaying(null);
     setShowSpotify(false);
   };
-
   const handleNavGo = () => {
     if (!navInput.trim()) return;
     setDestination(navInput.trim());
@@ -430,27 +424,19 @@ export default function TeslaUI() {
             </span>
           ))}
         </div>
-        <div
-          className="tsb-battery-wrap"
-          onClick={() => setShowRange((r) => !r)}
-          style={{ cursor: "pointer" }}
-        >
-          {showRange ? (
-            <span className="tsb-bat-pct">{range} mi</span>
-          ) : (
-            <>
-              <span className="tsb-bat-pct">{batteryPct}%</span>
-              <div className="tsb-bat-bar">
-                <div
-                  className="tsb-bat-fill"
-                  style={{ width: `${batteryPct}%` }}
-                />
-              </div>
-            </>
-          )}
-        </div>
         <div className="tsb-center-info">
           <span className="tsb-time">{formatTime(time)}</span>
+          <div
+            className="tsb-battery-wrap"
+            onClick={() => setShowRange((r) => !r)}
+            style={{ cursor: "pointer" }}
+          >
+            {showRange ? (
+              <span className="tsb-bat-pct">{range} mi</span>
+            ) : (
+              <span className="tsb-bat-pct">{batteryPct}%</span>
+            )}
+          </div>
           <span className="tsb-temp">{temp}°F</span>
           <span className="tsb-profile">👤 Profile</span>
         </div>
@@ -469,7 +455,6 @@ export default function TeslaUI() {
         {/* LEFT — car + music strip */}
         <div className="tesla-left">
           <div className="car-viz">
-            {/* Status labels */}
             <div className="car-label car-label-frunk">
               <span>Open</span>
               <strong>Frunk</strong>
@@ -558,14 +543,12 @@ export default function TeslaUI() {
                 <button
                   className={`music-extra-btn ${shuffle ? "active" : ""}`}
                   onClick={handleShuffle}
-                  title="Shuffle"
                 >
                   ⇄
                 </button>
                 <button
                   className={`music-extra-btn ${repeat !== "off" ? "active" : ""}`}
                   onClick={handleRepeat}
-                  title="Repeat"
                 >
                   ↺
                 </button>
@@ -577,7 +560,6 @@ export default function TeslaUI() {
                 </button>
               </div>
               <div
-                className="music-title"
                 style={{
                   fontSize: "0.58rem",
                   color: "rgba(255,255,255,0.25)",
@@ -600,7 +582,6 @@ export default function TeslaUI() {
         <div className="tesla-right">
           <MainMap destination={destination} dayMode={dayMode} />
           <div className="map-overlay">
-            {/* Nav search */}
             <div className="map-nav-bar">
               <span className="map-nav-search-icon">🔍</span>
               <input
@@ -616,8 +597,6 @@ export default function TeslaUI() {
                 </button>
               )}
             </div>
-
-            {/* Quick nav buttons */}
             <div className="map-quicknav">
               <button
                 className="map-quick-btn"
@@ -650,10 +629,7 @@ export default function TeslaUI() {
                 </button>
               ))}
             </div>
-
             <div style={{ flex: 1 }} />
-
-            {/* Trip bar when navigating */}
             {destination && (
               <div className="map-trip-bar">
                 <div className="trip-eta">
@@ -678,14 +654,12 @@ export default function TeslaUI() {
       {/* BOTTOM TASKBAR */}
       <div className="tesla-taskbar">
         <div className="taskbar-left">
-          {/* Car icon */}
           <button className="tb-btn active">
             <svg viewBox="0 0 24 24" fill="currentColor">
               <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z" />
             </svg>
           </button>
           <div className="tb-divider" />
-          {/* Speed */}
           <div className="tb-speed">
             <div className="tb-speed-arr">
               <button onClick={() => setSpeed((s) => Math.min(120, s + 5))}>
@@ -701,25 +675,20 @@ export default function TeslaUI() {
         </div>
 
         <div className="taskbar-center">
-          {/* Phone */}
           <button className="tb-icon-btn tb-icon-green">📞</button>
-          {/* Tesla T */}
           <button
             className="tb-icon-btn tb-icon-red"
             style={{ fontSize: "0.9rem", fontWeight: "700" }}
           >
             T
           </button>
-          {/* Camera */}
           <button className="tb-icon-btn tb-icon-white">📷</button>
-          {/* Bluetooth */}
           <button
             className="tb-icon-btn tb-icon-blue"
             style={{ fontSize: "0.85rem" }}
           >
             ⬡
           </button>
-          {/* Spotify */}
           <button
             className="tb-icon-btn tb-icon-green"
             onClick={() => (token ? setShowSpotify(true) : loginWithSpotify())}
@@ -728,14 +697,12 @@ export default function TeslaUI() {
               <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" />
             </svg>
           </button>
-          {/* More */}
           <button
             className="tb-icon-btn tb-icon-white"
             onClick={() => setShowSettings(true)}
           >
             ···
           </button>
-          {/* Climate */}
           <button
             className="tb-icon-btn tb-icon-white"
             onClick={() => setAcOn((a) => !a)}
@@ -746,14 +713,22 @@ export default function TeslaUI() {
           >
             ❄
           </button>
-          {/* Temp down */}
           <button
             className="tb-btn"
             onClick={() => setTemp((t) => Math.max(60, t - 1))}
           >
-            −{temp}°
+            −
           </button>
-          {/* Temp up */}
+          <span
+            style={{
+              fontSize: "0.85rem",
+              color: "rgba(255,255,255,0.7)",
+              minWidth: "36px",
+              textAlign: "center",
+            }}
+          >
+            {temp}°
+          </span>
           <button
             className="tb-btn"
             onClick={() => setTemp((t) => Math.min(85, t + 1))}

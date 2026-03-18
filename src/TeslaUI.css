@@ -51,20 +51,29 @@
 .tsb-battery-wrap {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
+  cursor: pointer;
 }
 .tsb-bat-pct {
   font-size: 0.72rem;
   color: rgba(255, 255, 255, 0.6);
+  font-family: "Inter", sans-serif;
 }
 .tsb-bat-bar {
-  width: 22px;
+  width: 20px;
   height: 10px;
-  border: 1.5px solid rgba(255, 255, 255, 0.3);
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
   border-radius: 2px;
-  position: relative;
   padding: 1.5px;
+  display: flex;
+  align-items: center;
   flex-shrink: 0;
+}
+.tsb-bat-fill {
+  height: 100%;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 1px;
+  transition: width 0.5s;
 }
 .tsb-bat-bar::after {
   content: "";
@@ -77,16 +86,11 @@
   background: rgba(255, 255, 255, 0.4);
   border-radius: 0 1px 1px 0;
 }
-.tsb-bat-fill {
-  height: 100%;
-  background: #fff;
-  border-radius: 1px;
-  transition: width 0.5s;
-}
+
 .tsb-center-info {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.75rem;
   position: absolute;
   left: 50%;
   transform: translateX(-50%);
@@ -199,6 +203,7 @@
 
 /* ── MUSIC BAR — bottom of left panel ── */
 .music-strip {
+  background: #1e1e1e;
   flex-shrink: 0;
   padding: 0.6rem 1rem;
   border-top: 1px solid rgba(255, 255, 255, 0.06);
@@ -593,20 +598,20 @@
   font-size: 1rem;
 }
 .tb-icon-green {
-  background: rgba(29, 185, 84, 0.15);
-  color: #1db954;
+  background: rgba(29, 185, 84, 0.25);
+  color: #22c55e;
 }
 .tb-icon-red {
-  background: rgba(220, 38, 38, 0.15);
-  color: #ef4444;
+  background: rgba(220, 38, 38, 0.25);
+  color: #f87171;
 }
 .tb-icon-blue {
-  background: rgba(59, 130, 246, 0.15);
-  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.25);
+  color: #60a5fa;
 }
 .tb-icon-white {
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.7);
+  background: rgba(255, 255, 255, 0.14);
+  color: rgba(255, 255, 255, 0.85);
 }
 .tb-icon-btn:hover {
   opacity: 0.8;
