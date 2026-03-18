@@ -504,12 +504,12 @@
 .taskbar-left {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.5rem;
 }
 .taskbar-center {
   display: flex;
   align-items: center;
-  gap: 0.15rem;
+  gap: 0.6rem;
 }
 .taskbar-right {
   display: flex;
