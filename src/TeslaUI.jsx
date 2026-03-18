@@ -255,6 +255,7 @@ export default function TeslaUI() {
   const [brightness, setBrightness] = useState(80);
   const [dayMode, setDayMode] = useState(false);
   const [batteryPct] = useState(87);
+  // eslint-disable-next-line
   const [range] = useState(247);
   const [navInput, setNavInput] = useState("");
   const [destination, setDestination] = useState("");
