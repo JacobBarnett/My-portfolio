@@ -17,7 +17,7 @@
     sans-serif;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: visible;
   user-select: none;
   -webkit-font-smoothing: antialiased;
 }
@@ -643,10 +643,13 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 16px;
   padding: 1.5rem;
-  width: 340px;
+  width: 320px;
   max-height: 80vh;
   overflow-y: auto;
+  position: relative;
+  z-index: 101;
 }
+
 .settings-title {
   font-size: 0.72rem;
   letter-spacing: 0.12em;
