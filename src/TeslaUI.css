@@ -29,8 +29,8 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 1.25rem;
-  background: #111;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  background: #0f0f0f;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
   flex-shrink: 0;
   z-index: 20;
 }
@@ -51,19 +51,20 @@
 .tsb-battery-wrap {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.5rem;
 }
 .tsb-bat-pct {
   font-size: 0.72rem;
   color: rgba(255, 255, 255, 0.6);
 }
 .tsb-bat-bar {
-  width: 28px;
-  height: 12px;
-  border: 1.5px solid rgba(255, 255, 255, 0.4);
+  width: 22px;
+  height: 10px;
+  border: 1.5px solid rgba(255, 255, 255, 0.3);
   border-radius: 2px;
   position: relative;
   padding: 1.5px;
+  flex-shrink: 0;
 }
 .tsb-bat-bar::after {
   content: "";
@@ -134,10 +135,10 @@
 
 /* ── LEFT PANEL — car + music ── */
 .tesla-left {
-  background: #111;
   display: flex;
   flex-direction: column;
-  border-right: 1px solid rgba(255, 255, 255, 0.06);
+  background: #131313;
+  border-right: 1px solid rgba(255, 255, 255, 0.04);
   position: relative;
   overflow: hidden;
 }
@@ -317,7 +318,7 @@
 .tesla-right {
   position: relative;
   overflow: hidden;
-  background: #1a1a1a;
+  background: #1c1c1c;
 }
 
 /* Map fills entire right panel */
@@ -492,8 +493,8 @@
 /* ── BOTTOM TASKBAR ── */
 .tesla-taskbar {
   height: 52px;
-  background: #111;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  background: #0f0f0f;
+  border-top: 1px solid rgba(255, 255, 255, 0.04);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -627,15 +628,16 @@
 /* ── SETTINGS OVERLAY ── */
 .settings-overlay {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   background: rgba(0, 0, 0, 0.7);
   backdrop-filter: blur(8px);
-  z-index: 100;
+  z-index: 9999;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 100vw;
-  height: 100vh;
 }
 
 .settings-panel {
@@ -647,7 +649,7 @@
   max-height: 80vh;
   overflow-y: auto;
   position: relative;
-  z-index: 101;
+  z-index: 10000;
 }
 
 .settings-title {

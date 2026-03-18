@@ -163,7 +163,6 @@ function MainMap({ destination, dayMode }) {
         : "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
       L.tileLayer(tileUrl, { maxZoom: 19 }).addTo(map);
       L.control.zoom({ position: "bottomright" }).addTo(map);
-      // Location arrow marker
       const arrow = L.divIcon({
         className: "",
         html: `<div style="width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:18px solid #e82127;transform:rotate(0deg);filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5));"></div>`,
@@ -181,6 +180,19 @@ function MainMap({ destination, dayMode }) {
       }
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    if (!map || !window.L) return;
+    const L = window.L;
+    map.eachLayer((layer) => {
+      if (layer._url) map.removeLayer(layer);
+    });
+    const tileUrl = dayMode
+      ? "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+      : "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
+    L.tileLayer(tileUrl, { maxZoom: 19 }).addTo(map);
+  }, [dayMode]);
 
   useEffect(() => {
     if (!destination || !mapInstanceRef.current) return;
@@ -263,6 +275,7 @@ export default function TeslaUI() {
   const [showSpotify, setShowSpotify] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const progressInterval = useRef(null);
+  const [showRange, setShowRange] = useState(false);
 
   // OAuth
   useEffect(() => {
@@ -417,11 +430,24 @@ export default function TeslaUI() {
             </span>
           ))}
         </div>
-        <div className="tsb-battery-wrap">
-          <span className="tsb-bat-pct">{batteryPct}%</span>
-          <div className="tsb-bat-bar">
-            <div className="tsb-bat-fill" style={{ width: `${batteryPct}%` }} />
-          </div>
+        <div
+          className="tsb-battery-wrap"
+          onClick={() => setShowRange((r) => !r)}
+          style={{ cursor: "pointer" }}
+        >
+          {showRange ? (
+            <span className="tsb-bat-pct">{range} mi</span>
+          ) : (
+            <>
+              <span className="tsb-bat-pct">{batteryPct}%</span>
+              <div className="tsb-bat-bar">
+                <div
+                  className="tsb-bat-fill"
+                  style={{ width: `${batteryPct}%` }}
+                />
+              </div>
+            </>
+          )}
         </div>
         <div className="tsb-center-info">
           <span className="tsb-time">{formatTime(time)}</span>
@@ -835,7 +861,7 @@ export default function TeslaUI() {
                 className="setting-btn"
                 onClick={() => setDayMode((d) => !d)}
               >
-                {dayMode ? "Night mode" : "Day mode"}
+                {dayMode ? "Day mode" : "Night mode"}
               </button>
             </div>
             <div className="setting-row">
