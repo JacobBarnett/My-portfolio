@@ -115,93 +115,14 @@ function waitForSize(el, maxMs = 3000) {
   });
 }
 
-function createLeafletMap(container, opts = {}) {
-  const L = window.L;
-  const map = L.map(container, {
-    center: [33.8868, -117.8878],
-    zoom: opts.zoom || 13,
-    zoomControl: opts.zoomControl !== undefined ? opts.zoomControl : false,
-    attributionControl: false,
-    zoomAnimation: false,
-    fadeAnimation: false,
-    dragging: opts.dragging !== undefined ? opts.dragging : true,
-    scrollWheelZoom:
-      opts.scrollWheelZoom !== undefined ? opts.scrollWheelZoom : true,
-  });
-  L.tileLayer(
-    "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-    { maxZoom: 19 },
-  ).addTo(map);
-  const icon = L.divIcon({
-    className: "",
-    html: '<div style="width:10px;height:10px;background:#cc0000;border-radius:50%;border:2px solid #fff;box-shadow:0 0 6px rgba(0,0,0,0.3);"></div>',
-    iconSize: [10, 10],
-    iconAnchor: [5, 5],
-  });
-  L.marker([33.8868, -117.8878], { icon }).addTo(map);
-  return map;
-}
-
-function MiniMap({ nightMode }) {
+// ── THE MAP — always visible on the right ──
+function MainMap({ destination, dayMode }) {
   const mapRef = useRef(null);
   const mapInstanceRef = useRef(null);
-  const initialized = useRef(false);
-  useEffect(() => {
-    if (!document.getElementById("leaflet-css")) {
-      const link = document.createElement("link");
-      link.id = "leaflet-css";
-      link.rel = "stylesheet";
-      link.href = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
-      document.head.appendChild(link);
-    }
-    const load = () =>
-      new Promise((resolve) => {
-        if (window.L) {
-          resolve(window.L);
-          return;
-        }
-        const s = document.createElement("script");
-        s.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
-        s.onload = () => resolve(window.L);
-        document.body.appendChild(s);
-      });
-    load().then(async () => {
-      if (initialized.current || !mapRef.current) return;
-      try {
-        await waitForSize(mapRef.current);
-      } catch {
-        return;
-      }
-      initialized.current = true;
-      mapInstanceRef.current = createLeafletMap(mapRef.current, {
-        zoom: 12,
-        zoomControl: false,
-        dragging: false,
-        scrollWheelZoom: false,
-      });
-    });
-    return () => {
-      if (mapInstanceRef.current) {
-        mapInstanceRef.current.remove();
-        mapInstanceRef.current = null;
-        initialized.current = false;
-      }
-    };
-  }, []);
-  useEffect(() => {
-    if (!mapRef.current) return;
-    mapRef.current.style.filter = nightMode
-      ? "brightness(0.7) invert(0.9) hue-rotate(180deg)"
-      : "none";
-  }, [nightMode]);
-  return <div ref={mapRef} className="home-mini-map" />;
-}
-
-function NavMap({ destination, activePanel }) {
-  const mapRef = useRef(null);
-  const mapInstanceRef = useRef(null);
-  const routeLayerRef = useRef(null);
   const markerRef = useRef(null);
+  const routeRef = useRef(null);
+  const initialized = useRef(false);
+
   useEffect(() => {
     if (!document.getElementById("leaflet-css")) {
       const link = document.createElement("link");
@@ -222,35 +143,48 @@ function NavMap({ destination, activePanel }) {
         document.body.appendChild(s);
       });
     load().then(async (L) => {
-      if (mapInstanceRef.current || !mapRef.current) return;
+      if (initialized.current || !mapRef.current) return;
       try {
         await waitForSize(mapRef.current);
       } catch {
         return;
       }
-      mapInstanceRef.current = createLeafletMap(mapRef.current, {
+      initialized.current = true;
+      const map = L.map(mapRef.current, {
+        center: [33.8868, -117.8878],
         zoom: 13,
-        zoomControl: true,
+        zoomControl: false,
+        attributionControl: false,
+        zoomAnimation: false,
+        fadeAnimation: false,
       });
+      const tileUrl = dayMode
+        ? "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+        : "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png";
+      L.tileLayer(tileUrl, { maxZoom: 19 }).addTo(map);
+      L.control.zoom({ position: "bottomright" }).addTo(map);
+      // Location arrow marker
+      const arrow = L.divIcon({
+        className: "",
+        html: `<div style="width:0;height:0;border-left:7px solid transparent;border-right:7px solid transparent;border-bottom:18px solid #e82127;transform:rotate(0deg);filter:drop-shadow(0 2px 4px rgba(0,0,0,0.5));"></div>`,
+        iconSize: [14, 18],
+        iconAnchor: [7, 9],
+      });
+      L.marker([33.8868, -117.8878], { icon: arrow }).addTo(map);
+      mapInstanceRef.current = map;
     });
     return () => {
       if (mapInstanceRef.current) {
         mapInstanceRef.current.remove();
         mapInstanceRef.current = null;
+        initialized.current = false;
       }
     };
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
-    if (activePanel !== "nav" || !mapInstanceRef.current) return;
-    requestAnimationFrame(() =>
-      requestAnimationFrame(() => {
-        if (mapInstanceRef.current) mapInstanceRef.current.invalidateSize();
-      }),
-    );
-  }, [activePanel]);
-  useEffect(() => {
-    if (!destination) return;
-    const drawRoute = async () => {
+    if (!destination || !mapInstanceRef.current) return;
+    const draw = async () => {
       let attempts = 0;
       while (
         !mapInstanceRef.current ||
@@ -262,9 +196,6 @@ function NavMap({ destination, activePanel }) {
       }
       const L = window.L;
       if (!L || !mapInstanceRef.current) return;
-      mapInstanceRef.current.invalidateSize();
-      await new Promise((r) => requestAnimationFrame(r));
-      await new Promise((r) => requestAnimationFrame(r));
       let results;
       try {
         const r = await fetch(
@@ -275,134 +206,36 @@ function NavMap({ destination, activePanel }) {
         return;
       }
       if (!results.length || !mapInstanceRef.current) return;
-      const { lat, lon, display_name } = results[0];
+      const { lat, lon } = results[0];
       const destLatLng = [parseFloat(lat), parseFloat(lon)];
       if (markerRef.current)
         mapInstanceRef.current.removeLayer(markerRef.current);
-      if (routeLayerRef.current)
-        mapInstanceRef.current.removeLayer(routeLayerRef.current);
+      if (routeRef.current)
+        mapInstanceRef.current.removeLayer(routeRef.current);
       const destIcon = L.divIcon({
         className: "",
-        html: '<div style="width:12px;height:12px;background:#2a7ae4;border-radius:50%;border:2px solid #fff;box-shadow:0 0 6px rgba(0,0,0,0.3);"></div>',
-        iconSize: [12, 12],
-        iconAnchor: [6, 6],
+        html: `<div style="width:10px;height:10px;background:#fff;border-radius:50%;border:2px solid #ccc;box-shadow:0 1px 4px rgba(0,0,0,0.4);"></div>`,
+        iconSize: [10, 10],
+        iconAnchor: [5, 5],
       });
-      markerRef.current = L.marker(destLatLng, { icon: destIcon })
-        .addTo(mapInstanceRef.current)
-        .bindPopup(display_name.split(",").slice(0, 2).join(","))
-        .openPopup();
+      markerRef.current = L.marker(destLatLng, { icon: destIcon }).addTo(
+        mapInstanceRef.current,
+      );
+      // Draw route line
+      routeRef.current = L.polyline([[33.8868, -117.8878], destLatLng], {
+        color: "#3b82f6",
+        weight: 3,
+        opacity: 0.85,
+      }).addTo(mapInstanceRef.current);
       mapInstanceRef.current.invalidateSize();
       const midLat = (33.8868 + destLatLng[0]) / 2;
       const midLng = (-117.8878 + destLatLng[1]) / 2;
       mapInstanceRef.current.setView([midLat, midLng], 10, { animate: false });
     };
-    drawRoute();
+    draw();
   }, [destination]);
-  return <div ref={mapRef} className="leaflet-map" />;
-}
 
-function MusicBar({
-  nowPlaying,
-  isPlaying,
-  onPlayPause,
-  onPrev,
-  onNext,
-  onOpenMusic,
-  token,
-  progress,
-  duration,
-  shuffle,
-  onShuffle,
-  repeat,
-  onRepeat,
-}) {
-  if (!token || !nowPlaying) return null;
-  const pct = duration > 0 ? (progress / duration) * 100 : 0;
-  const fmt = (ms) => {
-    if (!ms) return "0:00";
-    const s = Math.floor(ms / 1000);
-    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
-  };
-  return (
-    <div className="music-bar">
-      <div className="music-bar-left" onClick={onOpenMusic}>
-        <img
-          src={nowPlaying.album?.images?.[2]?.url}
-          alt="album"
-          className="music-bar-art"
-        />
-        <div className="music-bar-info">
-          <div className="music-bar-title">{nowPlaying.name}</div>
-          <div className="music-bar-artist">
-            {nowPlaying.artists?.[0]?.name}
-          </div>
-        </div>
-      </div>
-      <div className="music-bar-center">
-        <div className="music-bar-controls">
-          <button
-            className={`music-bar-btn mbc-icon ${shuffle ? "mbc-active" : ""}`}
-            onClick={onShuffle}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M16.069 15.5H14.14a5.75 5.75 0 0 1-4.363-2.013l-5.051-5.94A3.75 3.75 0 0 0 1.875 6H0v2h1.875a1.75 1.75 0 0 1 1.336.619l5.051 5.94A7.75 7.75 0 0 0 14.14 17.5h1.929l-1.065 1.065 1.414 1.414L19.847 16.5l-3.429-3.479-1.414 1.414L16.069 15.5zM0 16h1.875a1.75 1.75 0 0 0 1.336-.619l1.085-1.277 1.514 1.782-1.048 1.233A3.75 3.75 0 0 1 1.875 18H0v2zM16.069 8.5l-1.065-1.065 1.414-1.414L19.847 9.5l-3.429 3.479-1.414-1.414L16.069 10.5H14.14a1.75 1.75 0 0 0-1.336.619l-.547.644-1.514-1.782.547-.644A3.75 3.75 0 0 1 14.14 8.5h1.929z" />
-            </svg>
-          </button>
-          <button className="music-bar-btn mbc-icon" onClick={onPrev}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M3.3 1a.7.7 0 0 1 .7.7v8.15l9.95-8.744a.75.75 0 0 1 1.25.562v19.064a.75.75 0 0 1-1.25.562L4 12.646V20.3a.7.7 0 0 1-1.4 0V1.7a.7.7 0 0 1 .7-.7z" />
-            </svg>
-          </button>
-          <button className="music-bar-btn mbc-play" onClick={onPlayPause}>
-            {isPlaying ? (
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-              >
-                <path d="M5.7 3a.7.7 0 0 0-.7.7v16.6a.7.7 0 0 0 .7.7h2.6a.7.7 0 0 0 .7-.7V3.7a.7.7 0 0 0-.7-.7H5.7zm10 0a.7.7 0 0 0-.7.7v16.6a.7.7 0 0 0 .7.7h2.6a.7.7 0 0 0 .7-.7V3.7a.7.7 0 0 0-.7-.7h-2.6z" />
-              </svg>
-            ) : (
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="currentColor"
-              >
-                <path d="M7.05 3.606l13.49 7.577a.7.7 0 0 1 0 1.214L7.05 19.974A.7.7 0 0 1 6 19.367V4.633a.7.7 0 0 1 1.05-.607z" />
-              </svg>
-            )}
-          </button>
-          <button className="music-bar-btn mbc-icon" onClick={onNext}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M20.7 1a.7.7 0 0 1 .7.7v18.6a.7.7 0 0 1-1.4 0V12.646l-9.95 8.658A.75.75 0 0 1 8.8 20.74V1.562A.75.75 0 0 1 10.05 1l9.95 8.15V1.7a.7.7 0 0 1 .7-.7z" />
-            </svg>
-          </button>
-          <button
-            className={`music-bar-btn mbc-icon ${repeat !== "off" ? "mbc-active" : ""}`}
-            onClick={onRepeat}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-              <path d="M0 13.151a2.554 2.554 0 0 0 2.546 2.554h9.458v2l3.484-2.827-3.484-2.828v2H2.546A.554.554 0 0 1 2 13.15V6h6V4H2.546A2.554 2.554 0 0 0 0 6.554v6.597zm21.454-8.697H12v-2l-3.484 2.827L12 8.108v-2h9.454c.306 0 .546.24.546.546v7.096h-6v2h6A2.554 2.554 0 0 0 24 13.15V6.554a2.554 2.554 0 0 0-2.546-2.554v.454z" />
-            </svg>
-          </button>
-        </div>
-        <div className="music-bar-progress">
-          <span className="music-bar-time">{fmt(progress)}</span>
-          <div className="music-bar-track">
-            <div className="music-bar-fill" style={{ width: `${pct}%` }} />
-          </div>
-          <span className="music-bar-time">{fmt(duration)}</span>
-        </div>
-      </div>
-      <div className="music-bar-right">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--muted)">
-          <path d="M12 3.75a.75.75 0 0 0-1.2-.6L5.55 7.5H2a1 1 0 0 0-1 1v7a1 1 0 0 0 1 1h3.55l5.25 4.35a.75.75 0 0 0 1.2-.6V3.75zm2.76 2.36a.75.75 0 0 1 1.06.04 8.5 8.5 0 0 1 0 11.7.75.75 0 1 1-1.1-1.02 7 7 0 0 0 0-9.66.75.75 0 0 1 .04-1.06z" />
-        </svg>
-      </div>
-    </div>
-  );
+  return <div ref={mapRef} className="tesla-map-full" />;
 }
 
 export default function TeslaUI() {
@@ -418,17 +251,19 @@ export default function TeslaUI() {
   const [temp, setTemp] = useState(72);
   const [acOn, setAcOn] = useState(true);
   const [gear, setGear] = useState("P");
+  const [speed, setSpeed] = useState(0);
   const [brightness, setBrightness] = useState(80);
-  const [nightMode, setNightMode] = useState(false);
-  const [activePanel, setActivePanel] = useState("home");
+  const [dayMode, setDayMode] = useState(false);
   const [batteryPct] = useState(87);
   const [range] = useState(247);
   const [navInput, setNavInput] = useState("");
   const [destination, setDestination] = useState("");
   const [navHistory, setNavHistory] = useState([]);
-  const [navVisited, setNavVisited] = useState(false);
+  const [showSpotify, setShowSpotify] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const progressInterval = useRef(null);
 
+  // OAuth
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const code = params.get("code");
@@ -444,10 +279,7 @@ export default function TeslaUI() {
           setAuthLoading(false);
           if (t) {
             setToken(t);
-            const panel =
-              localStorage.getItem("spotify_post_login_panel") || "music";
-            localStorage.removeItem("spotify_post_login_panel");
-            setActivePanel(panel);
+            setShowSpotify(true);
           }
           window.history.replaceState({}, "", window.location.pathname);
         })
@@ -458,6 +290,7 @@ export default function TeslaUI() {
     }
   }, []);
 
+  // Token expiry
   useEffect(() => {
     const interval = setInterval(() => {
       const expiry = localStorage.getItem("spotify_expires");
@@ -520,414 +353,510 @@ export default function TeslaUI() {
     setTimeout(fetchNowPlaying, 900);
   };
   const handleShuffle = async () => {
-    const next = !shuffle;
-    setShuffle(next);
-    await spotifyFetch(`/me/player/shuffle?state=${next}`, { method: "PUT" });
+    const n = !shuffle;
+    setShuffle(n);
+    await spotifyFetch(`/me/player/shuffle?state=${n}`, { method: "PUT" });
   };
   const handleRepeat = async () => {
     const modes = ["off", "context", "track"];
-    const next = modes[(modes.indexOf(repeat) + 1) % 3];
-    setRepeat(next);
-    await spotifyFetch(`/me/player/repeat?state=${next}`, { method: "PUT" });
+    const n = modes[(modes.indexOf(repeat) + 1) % 3];
+    setRepeat(n);
+    await spotifyFetch(`/me/player/repeat?state=${n}`, { method: "PUT" });
   };
   const logout = () => {
     localStorage.removeItem("spotify_token");
     localStorage.removeItem("spotify_expires");
     setToken(null);
     setNowPlaying(null);
+    setShowSpotify(false);
   };
+
   const handleNavGo = () => {
     if (!navInput.trim()) return;
     setDestination(navInput.trim());
     setNavHistory((h) =>
-      [navInput.trim(), ...h.filter((x) => x !== navInput.trim())].slice(0, 5),
+      [navInput.trim(), ...h.filter((x) => x !== navInput.trim())].slice(0, 3),
     );
   };
 
+  const pct = duration > 0 ? (progress / duration) * 100 : 0;
+  const fmt = (ms) => {
+    if (!ms) return "0:00";
+    const s = Math.floor(ms / 1000);
+    return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+  };
   const formatTime = (d) =>
     d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-  const formatDate = (d) =>
-    d.toLocaleDateString([], {
-      weekday: "long",
-      month: "long",
-      day: "numeric",
-    });
 
   if (authLoading) {
     return (
-      <div className="tesla-wrapper tesla-loading">
+      <div className="tesla-loading">
         <div className="loading-spinner" />
-        <div className="loading-text">Connecting to Spotify...</div>
+        <div className="loading-text">Connecting...</div>
       </div>
     );
   }
 
   return (
     <div
-      className={`tesla-wrapper${nightMode ? " night-mode" : ""}`}
+      className={`tesla-wrapper${dayMode ? " day-mode" : ""}`}
       style={{ "--brightness-overlay": `${((100 - brightness) / 100) * 0.85}` }}
     >
       {/* STATUS BAR */}
       <div className="tesla-statusbar">
-        <div className="tsb-left">
-          <span className="tsb-time">{formatTime(time)}</span>
-          <span className="tsb-date">{formatDate(time)}</span>
+        <div className="tsb-prnd">
+          {["P", "R", "N", "D"].map((g) => (
+            <span
+              key={g}
+              className={`prnd-letter ${gear === g ? "active" : ""}`}
+              style={{ cursor: "pointer" }}
+              onClick={() => setGear(g)}
+            >
+              {g}
+            </span>
+          ))}
         </div>
-        <div className="tsb-center">
-          <div className="tsb-battery">
-            <span className="tsb-bat-pct">{batteryPct}%</span>
-            <div className="tsb-bat-bar">
-              <div
-                className="tsb-bat-fill"
-                style={{ width: `${batteryPct}%` }}
-              />
-            </div>
-            <span className="tsb-range">{range} mi</span>
+        <div className="tsb-battery-wrap">
+          <span className="tsb-bat-pct">{batteryPct}%</span>
+          <div className="tsb-bat-bar">
+            <div className="tsb-bat-fill" style={{ width: `${batteryPct}%` }} />
           </div>
+        </div>
+        <div className="tsb-center-info">
+          <span className="tsb-time">{formatTime(time)}</span>
+          <span className="tsb-temp">{temp}°F</span>
+          <span className="tsb-profile">👤 Profile</span>
         </div>
         <div className="tsb-right">
           <button
             className="tsb-daynight"
-            onClick={() => setNightMode((n) => !n)}
+            onClick={() => setDayMode((d) => !d)}
           >
-            {nightMode ? "☀️" : "🌙"}
+            {dayMode ? "🌙" : "☀️"}
           </button>
-          <span className="tsb-speed">
-            0 <small>mph</small>
-          </span>
         </div>
       </div>
 
-      <div className="tesla-main">
-        {/* LEFT */}
+      {/* MAIN BODY */}
+      <div className="tesla-body">
+        {/* LEFT — car + music strip */}
         <div className="tesla-left">
           <div className="car-viz">
-            <TeslaModel3D dayMode={!nightMode} />
-          </div>
-          <div className="gear-selector">
-            {["R", "N", "D", "P"].map((g) => (
-              <button
-                key={g}
-                className={`gear-btn ${gear === g ? "active" : ""}`}
-                onClick={() => setGear(g)}
-              >
-                {g}
-              </button>
-            ))}
-          </div>
-          <div className="climate-panel">
-            <div className="climate-header">
-              <span className="climate-icon">❄️</span>
-              <span className="climate-label">Climate</span>
-              <button
-                className={`climate-toggle ${acOn ? "on" : ""}`}
-                onClick={() => setAcOn(!acOn)}
-              >
-                {acOn ? "ON" : "OFF"}
-              </button>
+            {/* Status labels */}
+            <div className="car-label car-label-frunk">
+              <span>Open</span>
+              <strong>Frunk</strong>
             </div>
-            <div className="temp-control">
-              <button
-                className="temp-btn"
-                onClick={() => setTemp((t) => Math.max(60, t - 1))}
-              >
-                −
-              </button>
-              <span className="temp-display">{temp}°</span>
-              <button
-                className="temp-btn"
-                onClick={() => setTemp((t) => Math.min(85, t + 1))}
-              >
-                +
-              </button>
+            <div className="car-label car-label-trunk">
+              <span>Open</span>
+              <strong>Trunk</strong>
             </div>
-          </div>
-          {token && nowPlaying && (
-            <div className="left-now-playing">
-              <img
-                src={nowPlaying.album?.images?.[1]?.url}
-                alt=""
-                className="left-album-art"
-              />
-              <div className="left-track-info">
-                <div className="left-track-name">{nowPlaying.name}</div>
-                <div className="left-track-artist">
-                  {nowPlaying.artists?.[0]?.name}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* CENTER */}
-        <div className="tesla-center">
-          <div className="center-tabs">
-            {[
-              { id: "home", icon: "⊞", label: "Home" },
-              { id: "music", icon: "♫", label: "Music" },
-              { id: "nav", icon: "◎", label: "Navigate" },
-              { id: "settings", icon: "⚙", label: "Settings" },
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                className={`center-tab ${activePanel === tab.id ? "active" : ""}`}
-                onClick={() => {
-                  setActivePanel(tab.id);
-                  if (tab.id === "nav") setNavVisited(true);
-                }}
-              >
-                <span className="tab-icon">{tab.icon}</span>
-                <span className="tab-label">{tab.label}</span>
-              </button>
-            ))}
+            <div className="car-status-icon">🔒</div>
+            <div className="car-charging-line">⚡</div>
+            <TeslaModel3D dayMode={dayMode} />
           </div>
 
-          {activePanel === "home" && (
-            <div className="panel home-panel">
-              {/* Clean inline stats — no boxes */}
-              <div className="home-stats-row">
-                <div className="home-stat">
-                  <div className="hs-label">Battery</div>
-                  <div className="hs-value">
-                    {batteryPct}
-                    <span>%</span>
-                  </div>
-                  <div className="battery-bar-full">
-                    <div
-                      className="battery-bar-fill"
-                      style={{ width: `${batteryPct}%` }}
-                    />
-                  </div>
-                  <div className="hs-sub">{range} mi</div>
-                </div>
-                <div className="home-stat">
-                  <div className="hs-label">Interior</div>
-                  <div className="hs-value">
-                    {temp}
-                    <span>°F</span>
-                  </div>
-                  <div className="hs-sub">
-                    {acOn ? "Climate on" : "Climate off"}
-                  </div>
-                </div>
-                <div className="home-stat">
-                  <div className="hs-label">Doors</div>
-                  <div className="hs-value" style={{ fontSize: "1.4rem" }}>
-                    🔒
-                  </div>
-                  <div className="hs-sub">Locked</div>
-                </div>
-                <div className="home-stat">
-                  <div className="hs-label">Brightness</div>
-                  <input
-                    type="range"
-                    min="10"
-                    max="100"
-                    value={brightness}
-                    onChange={(e) => setBrightness(Number(e.target.value))}
-                    className="bright-slider"
-                  />
-                  <div className="hs-sub">{brightness}%</div>
-                </div>
-              </div>
-
-              {/* Map takes remaining space */}
-              <div className="home-map-section">
-                <div className="home-map-header">
-                  <span className="home-map-label">📍 Anaheim, CA</span>
-                  <button
-                    className="home-map-nav-btn"
-                    onClick={() => {
-                      setActivePanel("nav");
-                      setNavVisited(true);
-                    }}
-                  >
-                    Navigate
-                  </button>
-                </div>
-                <MiniMap nightMode={nightMode} />
-              </div>
-            </div>
-          )}
-
-          {activePanel === "music" && (
-            <div className="panel music-panel">
-              {!token ? (
-                <div className="spotify-login">
-                  <div className="spotify-logo">
-                    <svg
-                      viewBox="0 0 24 24"
-                      width="48"
-                      height="48"
-                      fill="#33a852"
-                    >
-                      <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" />
-                    </svg>
-                  </div>
-                  <h3 className="spotify-title">Connect Spotify</h3>
-                  <p className="spotify-desc">
-                    Stream music through your dashboard
-                  </p>
-                  <button className="spotify-btn" onClick={loginWithSpotify}>
-                    Connect
-                  </button>
-                </div>
-              ) : (
-                <SpotifyPanel onDisconnect={logout} dayMode={!nightMode} />
-              )}
-            </div>
-          )}
-
-          {activePanel === "nav" && (
-            <div className="panel nav-panel">
-              <div className="nav-search-row">
-                <input
-                  className="nav-input"
-                  placeholder="Where to?"
-                  value={navInput}
-                  onChange={(e) => setNavInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleNavGo()}
-                />
-                <button className="nav-go" onClick={handleNavGo}>
-                  Go
-                </button>
-              </div>
-              {navHistory.length > 0 && !destination && (
-                <div className="nav-history">
-                  {navHistory.map((h) => (
-                    <button
-                      key={h}
-                      className="nav-history-item"
-                      onClick={() => {
-                        setNavInput(h);
-                        setDestination(h);
-                      }}
-                    >
-                      <span>📍</span> {h}
-                    </button>
-                  ))}
-                </div>
-              )}
-              {destination && (
-                <div className="nav-active-dest">
-                  <span className="nav-dest-label">To</span>
-                  <span className="nav-dest-name">{destination}</span>
-                  <button
-                    className="nav-clear"
-                    onClick={() => {
-                      setDestination("");
-                      setNavInput("");
-                    }}
-                  >
-                    ✕
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-
-          {activePanel === "settings" && (
-            <div className="panel settings-panel">
-              {[
-                { label: "Brightness", value: `${brightness}%` },
-                { label: "Interior Temperature", value: `${temp}°F` },
-                { label: "Climate Control", value: acOn ? "On" : "Off" },
-                {
-                  label: "Spotify",
-                  value: token ? "Connected" : "Not connected",
-                },
-                { label: "Software", value: "2024.44.25" },
-                { label: "Vehicle", value: "Model S" },
-                { label: "VIN", value: "5YJ3E1EA•••••••••" },
-              ].map((s) => (
-                <div className="setting-row" key={s.label}>
-                  <span className="setting-label">{s.label}</span>
-                  <span className="setting-value">{s.value}</span>
-                </div>
-              ))}
-              <div className="setting-row">
-                <span className="setting-label">Display</span>
-                <button
-                  className="setting-mode-btn"
-                  onClick={() => setNightMode((n) => !n)}
-                >
-                  {nightMode ? "Day mode" : "Night mode"}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {navVisited && (
+          {/* MUSIC STRIP */}
+          <div className="music-strip">
             <div
-              style={{
-                display: activePanel === "nav" ? "flex" : "none",
-                flexDirection: "column",
-                overflow: "hidden",
-                padding: "0 1.5rem 1.5rem",
-                height: "500px",
+              className="music-now-playing"
+              onClick={() => {
+                if (token) setShowSpotify(true);
+                else loginWithSpotify();
               }}
             >
-              <NavMap destination={destination} activePanel={activePanel} />
+              {nowPlaying ? (
+                <>
+                  <img
+                    src={nowPlaying.album?.images?.[2]?.url}
+                    alt=""
+                    className="music-art"
+                  />
+                  <div className="music-info">
+                    <div className="music-title">{nowPlaying.name}</div>
+                    <div className="music-artist">
+                      {nowPlaying.artists?.[0]?.name}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="music-art-placeholder">♪</div>
+                  <div className="music-info">
+                    <div className="music-title">
+                      {token ? "Not playing" : "Connect Spotify"}
+                    </div>
+                    <div className="music-artist">
+                      {token ? "Open Spotify" : "Tap to connect"}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
-          )}
+            <div
+              style={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "flex-end",
+                gap: "0.3rem",
+              }}
+            >
+              <div className="music-controls">
+                <button className="music-ctrl-btn" onClick={handlePrev}>
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                  >
+                    <path d="M3.3 1a.7.7 0 0 1 .7.7v8.15l9.95-8.744a.75.75 0 0 1 1.25.562v19.064a.75.75 0 0 1-1.25.562L4 12.646V20.3a.7.7 0 0 1-1.4 0V1.7a.7.7 0 0 1 .7-.7z" />
+                  </svg>
+                </button>
+                <button
+                  className="music-ctrl-btn play"
+                  onClick={handlePlayPause}
+                >
+                  {isPlaying ? "⏸" : "▶"}
+                </button>
+                <button className="music-ctrl-btn" onClick={handleNext}>
+                  <svg
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                  >
+                    <path d="M20.7 1a.7.7 0 0 1 .7.7v18.6a.7.7 0 0 1-1.4 0V12.646l-9.95 8.658A.75.75 0 0 1 8.8 20.74V1.562A.75.75 0 0 1 10.05 1l9.95 8.15V1.7a.7.7 0 0 1 .7-.7z" />
+                  </svg>
+                </button>
+                <button
+                  className={`music-extra-btn ${shuffle ? "active" : ""}`}
+                  onClick={handleShuffle}
+                  title="Shuffle"
+                >
+                  ⇄
+                </button>
+                <button
+                  className={`music-extra-btn ${repeat !== "off" ? "active" : ""}`}
+                  onClick={handleRepeat}
+                  title="Repeat"
+                >
+                  ↺
+                </button>
+                <button
+                  className="music-extra-btn"
+                  onClick={() => nowPlaying && setShowSpotify(true)}
+                >
+                  ☰
+                </button>
+              </div>
+              <div
+                className="music-title"
+                style={{
+                  fontSize: "0.58rem",
+                  color: "rgba(255,255,255,0.25)",
+                  textAlign: "right",
+                }}
+              >
+                {nowPlaying ? `${fmt(progress)} / ${fmt(duration)}` : ""}
+              </div>
+            </div>
+            <div className="music-progress-bar">
+              <div
+                className="music-progress-fill"
+                style={{ width: `${pct}%` }}
+              />
+            </div>
+          </div>
         </div>
 
-        {/* RIGHT */}
+        {/* RIGHT — full map with overlays */}
         <div className="tesla-right">
-          <div className="right-time">
-            <div className="rt-time">{formatTime(time)}</div>
-            <div className="rt-date">
-              {time.toLocaleDateString([], {
-                weekday: "short",
-                month: "short",
-                day: "numeric",
-              })}
+          <MainMap destination={destination} dayMode={dayMode} />
+          <div className="map-overlay">
+            {/* Nav search */}
+            <div className="map-nav-bar">
+              <span className="map-nav-search-icon">🔍</span>
+              <input
+                className="map-nav-input"
+                placeholder="Navigate"
+                value={navInput}
+                onChange={(e) => setNavInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleNavGo()}
+              />
+              {navInput && (
+                <button className="map-nav-go" onClick={handleNavGo}>
+                  Go
+                </button>
+              )}
             </div>
+
+            {/* Quick nav buttons */}
+            <div className="map-quicknav">
+              <button
+                className="map-quick-btn"
+                onClick={() => {
+                  setNavInput("Home");
+                  setDestination("Home");
+                }}
+              >
+                🏠 Home
+              </button>
+              <button
+                className="map-quick-btn"
+                onClick={() => {
+                  setNavInput("Work");
+                  setDestination("Work");
+                }}
+              >
+                💼 Work
+              </button>
+              {navHistory.map((h) => (
+                <button
+                  key={h}
+                  className="map-quick-btn"
+                  onClick={() => {
+                    setNavInput(h);
+                    setDestination(h);
+                  }}
+                >
+                  📍 {h}
+                </button>
+              ))}
+            </div>
+
+            <div style={{ flex: 1 }} />
+
+            {/* Trip bar when navigating */}
+            {destination && (
+              <div className="map-trip-bar">
+                <div className="trip-eta">
+                  <strong>15 min</strong> · 7 mi
+                </div>
+                <div className="trip-dest">{destination}</div>
+                <button
+                  className="trip-end-btn"
+                  onClick={() => {
+                    setDestination("");
+                    setNavInput("");
+                  }}
+                >
+                  End Trip
+                </button>
+              </div>
+            )}
           </div>
-          <div className="right-stats">
-            <div className="rstat">
-              <span className="rstat-icon">⚡</span>
-              <span className="rstat-label">Battery</span>
-              <span className="rstat-val">{batteryPct}%</span>
+        </div>
+      </div>
+
+      {/* BOTTOM TASKBAR */}
+      <div className="tesla-taskbar">
+        <div className="taskbar-left">
+          {/* Car icon */}
+          <button className="tb-btn active">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M18.92 6.01C18.72 5.42 18.16 5 17.5 5h-11c-.66 0-1.21.42-1.42 1.01L3 12v8c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-1h12v1c0 .55.45 1 1 1h1c.55 0 1-.45 1-1v-8l-2.08-5.99zM6.5 16c-.83 0-1.5-.67-1.5-1.5S5.67 13 6.5 13s1.5.67 1.5 1.5S7.33 16 6.5 16zm11 0c-.83 0-1.5-.67-1.5-1.5s.67-1.5 1.5-1.5 1.5.67 1.5 1.5-.67 1.5-1.5 1.5zM5 11l1.5-4.5h11L19 11H5z" />
+            </svg>
+          </button>
+          <div className="tb-divider" />
+          {/* Speed */}
+          <div className="tb-speed">
+            <div className="tb-speed-arr">
+              <button onClick={() => setSpeed((s) => Math.min(120, s + 5))}>
+                ▲
+              </button>
+              <button onClick={() => setSpeed((s) => Math.max(0, s - 5))}>
+                ▼
+              </button>
             </div>
-            <div className="rstat">
-              <span className="rstat-icon">🗺</span>
-              <span className="rstat-label">Range</span>
-              <span className="rstat-val">{range} mi</span>
-            </div>
-            <div className="rstat">
-              <span className="rstat-icon">🌡</span>
-              <span className="rstat-label">Cabin</span>
-              <span className="rstat-val">{temp}°</span>
-            </div>
+            <span className="tb-speed-val">{speed}</span>
           </div>
-          <div className="right-gear">
-            <div className="gear-display">
-              <span className="gear-label">Gear</span>
-              <span className="gear-value">{gear}</span>
-            </div>
-          </div>
-          <a href="/" className="tesla-back">
-            ← Portfolio
+          <div className="tb-divider" />
+        </div>
+
+        <div className="taskbar-center">
+          {/* Phone */}
+          <button className="tb-icon-btn tb-icon-green">📞</button>
+          {/* Tesla T */}
+          <button
+            className="tb-icon-btn tb-icon-red"
+            style={{ fontSize: "0.9rem", fontWeight: "700" }}
+          >
+            T
+          </button>
+          {/* Camera */}
+          <button className="tb-icon-btn tb-icon-white">📷</button>
+          {/* Bluetooth */}
+          <button
+            className="tb-icon-btn tb-icon-blue"
+            style={{ fontSize: "0.85rem" }}
+          >
+            ⬡
+          </button>
+          {/* Spotify */}
+          <button
+            className="tb-icon-btn tb-icon-green"
+            onClick={() => (token ? setShowSpotify(true) : loginWithSpotify())}
+          >
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+              <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.66 0 12 0zm5.521 17.34c-.24.359-.66.48-1.021.24-2.82-1.74-6.36-2.101-10.561-1.141-.418.122-.779-.179-.899-.539-.12-.421.18-.78.54-.9 4.56-1.021 8.52-.6 11.64 1.32.42.18.479.659.301 1.02zm1.44-3.3c-.301.42-.841.6-1.262.3-3.239-1.98-8.159-2.58-11.939-1.38-.479.12-1.02-.12-1.14-.6-.12-.48.12-1.021.6-1.141C9.6 9.9 15 10.561 18.72 12.84c.361.181.54.78.241 1.2zm.12-3.36C15.24 8.4 8.82 8.16 5.16 9.301c-.6.179-1.2-.181-1.38-.721-.18-.601.18-1.2.72-1.381 4.26-1.26 11.28-1.02 15.721 1.621.539.3.719 1.02.419 1.56-.299.421-1.02.599-1.559.3z" />
+            </svg>
+          </button>
+          {/* More */}
+          <button
+            className="tb-icon-btn tb-icon-white"
+            onClick={() => setShowSettings(true)}
+          >
+            ···
+          </button>
+          {/* Climate */}
+          <button
+            className="tb-icon-btn tb-icon-white"
+            onClick={() => setAcOn((a) => !a)}
+            style={{
+              color: acOn ? "#3b82f6" : undefined,
+              background: acOn ? "rgba(59,130,246,0.15)" : undefined,
+            }}
+          >
+            ❄
+          </button>
+          {/* Temp down */}
+          <button
+            className="tb-btn"
+            onClick={() => setTemp((t) => Math.max(60, t - 1))}
+          >
+            −{temp}°
+          </button>
+          {/* Temp up */}
+          <button
+            className="tb-btn"
+            onClick={() => setTemp((t) => Math.min(85, t + 1))}
+          >
+            +
+          </button>
+        </div>
+
+        <div className="taskbar-right">
+          <div className="tb-divider" />
+          <button className="tb-vol-btn">🔊</button>
+          <button className="tb-btn">›</button>
+          <a href="/" style={{ textDecoration: "none" }}>
+            <button
+              className="tb-btn"
+              style={{ fontSize: "0.65rem", color: "rgba(255,255,255,0.3)" }}
+            >
+              ← Portfolio
+            </button>
           </a>
         </div>
       </div>
 
-      <MusicBar
-        nowPlaying={nowPlaying}
-        isPlaying={isPlaying}
-        onPlayPause={handlePlayPause}
-        onPrev={handlePrev}
-        onNext={handleNext}
-        onOpenMusic={() => setActivePanel("music")}
-        token={token}
-        progress={progress}
-        duration={duration}
-        shuffle={shuffle}
-        onShuffle={handleShuffle}
-        repeat={repeat}
-        onRepeat={handleRepeat}
-      />
+      {/* SPOTIFY FULLSCREEN OVERLAY */}
+      {showSpotify && (
+        <div className="spotify-overlay">
+          <div className="spotify-overlay-header">
+            <button
+              className="spotify-back-btn"
+              onClick={() => setShowSpotify(false)}
+            >
+              ←
+            </button>
+            <span className="spotify-overlay-title">Music</span>
+          </div>
+          <div className="spotify-overlay-body">
+            {token ? (
+              <SpotifyPanel onDisconnect={logout} dayMode={dayMode} />
+            ) : (
+              <div
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  height: "100%",
+                  gap: "1rem",
+                }}
+              >
+                <p
+                  style={{
+                    color: "rgba(255,255,255,0.5)",
+                    fontSize: "0.85rem",
+                  }}
+                >
+                  Connect your Spotify account
+                </p>
+                <button
+                  onClick={loginWithSpotify}
+                  style={{
+                    background: "#1db954",
+                    border: "none",
+                    borderRadius: "24px",
+                    color: "#fff",
+                    padding: "0.7rem 2rem",
+                    fontWeight: "600",
+                    cursor: "pointer",
+                  }}
+                >
+                  Connect Spotify
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* SETTINGS OVERLAY */}
+      {showSettings && (
+        <div
+          className="settings-overlay"
+          onClick={() => setShowSettings(false)}
+        >
+          <div className="settings-panel" onClick={(e) => e.stopPropagation()}>
+            <div className="settings-title">Settings</div>
+            {[
+              { label: "Brightness", value: `${brightness}%` },
+              { label: "Interior Temp", value: `${temp}°F` },
+              { label: "Climate", value: acOn ? "On" : "Off" },
+              {
+                label: "Spotify",
+                value: token ? "Connected" : "Not connected",
+              },
+              { label: "Software", value: "2024.44.25" },
+              { label: "VIN", value: "5YJ3E1EA•••••••••" },
+            ].map((s) => (
+              <div className="setting-row" key={s.label}>
+                <span className="setting-label">{s.label}</span>
+                <span className="setting-value">{s.value}</span>
+              </div>
+            ))}
+            <div className="setting-row">
+              <span className="setting-label">Display</span>
+              <button
+                className="setting-btn"
+                onClick={() => setDayMode((d) => !d)}
+              >
+                {dayMode ? "Night mode" : "Day mode"}
+              </button>
+            </div>
+            <div className="setting-row">
+              <span className="setting-label">Brightness</span>
+              <input
+                type="range"
+                min="10"
+                max="100"
+                value={brightness}
+                onChange={(e) => setBrightness(Number(e.target.value))}
+                style={{ width: "120px", accentColor: "#fff" }}
+              />
+            </div>
+            <button
+              className="settings-close"
+              onClick={() => setShowSettings(false)}
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
