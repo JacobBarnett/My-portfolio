@@ -192,13 +192,13 @@ export default function AMD() {
     // ── EARTH ──
     const tl = new THREE.TextureLoader();
     const earthTex = tl.load(
-      "https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg",
+      "https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-blue-marble.jpg",
     );
     const earthNightTex = tl.load(
-      "https://unpkg.com/three-globe/example/img/earth-night.jpg",
+      "https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-night.jpg",
     );
     const cloudTex = tl.load(
-      "https://unpkg.com/three-globe/example/img/earth-clouds.png",
+      "https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-clouds.png",
     );
 
     const earthMesh = new THREE.Mesh(
@@ -239,7 +239,7 @@ export default function AMD() {
 
     // ── MOON ──
     const moonTex = tl.load(
-      "https://unpkg.com/three-globe/example/img/earth-topology.png",
+      "https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-topology.png",
     );
     const moon = new THREE.Mesh(
       new THREE.SphereGeometry(0.22, 32, 32),
@@ -272,9 +272,10 @@ export default function AMD() {
     scene.add(new THREE.AmbientLight(0x112244, 0.5));
 
     // Animate
-    const clock = new THREE.Clock();
+    const clock = new THREE.Timer();
     const animate = () => {
       frameRef.current = requestAnimationFrame(animate);
+      clock.update();
       const t = clock.getElapsedTime();
       earthMesh.rotation.y = t * 0.05;
       cloudMesh.rotation.y = t * 0.06;
