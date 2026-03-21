@@ -5,6 +5,7 @@ import ConnectFour from "./ConnectFour";
 import TeslaUI from "./TeslaUI";
 import RoboTaxi from "./RoboTaxi";
 import AMD from "./AMD";
+import AMDS from "./AMDS";
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
         <Route path="/callback" element={<TeslaUI />} />
         <Route path="/robotaxi" element={<RoboTaxi />} />
         <Route path="/asteroids" element={<AMD />} />
+        <Route path="/mining" element={<AMDS />} />
       </Routes>
     </BrowserRouter>
   );

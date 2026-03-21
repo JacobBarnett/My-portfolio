@@ -1,0 +1,517 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap");
+
+* {
+  box-sizing: border-box;
+}
+
+.amds-root {
+  width: 100vw;
+  height: 100vh;
+  background: #030608;
+  display: flex;
+  flex-direction: column;
+  font-family: "DM Sans", sans-serif;
+  color: #e8edf5;
+  overflow: hidden;
+}
+
+/* ── TOP BAR ── */
+.amds-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 1.5rem;
+  background: rgba(3, 6, 8, 0.98);
+  border-bottom: 1px solid rgba(104, 211, 145, 0.15);
+  flex-shrink: 0;
+}
+
+.amds-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.amds-topbar-right {
+  display: flex;
+  gap: 2rem;
+}
+
+.amds-btn-back {
+  background: none;
+  border: 1px solid rgba(104, 211, 145, 0.2);
+  color: rgba(104, 211, 145, 0.6);
+  border-radius: 3px;
+  padding: 0.25rem 0.65rem;
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  font-family: "DM Sans", sans-serif;
+  transition: all 0.2s;
+}
+.amds-btn-back:hover {
+  border-color: rgba(104, 211, 145, 0.5);
+  color: #68d391;
+}
+
+.amds-title-group {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.amds-status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.amds-title {
+  font-family: "DM Serif Display", serif;
+  font-size: 0.95rem;
+  color: #90cdf4;
+  letter-spacing: 0.05em;
+}
+
+.amds-phase-badge {
+  padding: 0.2rem 0.7rem;
+  border-radius: 3px;
+  font-size: 0.62rem;
+  letter-spacing: 0.18em;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.amds-wasm-badge {
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  color: #68d391;
+  opacity: 0.7;
+}
+
+.amds-stat {
+  text-align: right;
+}
+
+.amds-stat-label {
+  font-size: 0.58rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgba(104, 211, 145, 0.5);
+}
+
+.amds-stat-val {
+  font-size: 0.95rem;
+  font-family: "DM Serif Display", serif;
+}
+.amds-stat-val.ok {
+  color: #68d391;
+}
+.amds-stat-val.warn {
+  color: #fc8181;
+}
+
+/* ── MAIN LAYOUT ── */
+.amds-main {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* ── LEFT SIDEBAR ── */
+.amds-sidebar {
+  width: 230px;
+  background: rgba(3, 6, 8, 0.98);
+  border-right: 1px solid rgba(104, 211, 145, 0.1);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+.amds-section {
+  padding: 0.9rem;
+  border-bottom: 1px solid rgba(104, 211, 145, 0.08);
+}
+
+.amds-section-label {
+  display: block;
+  font-size: 0.62rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(104, 211, 145, 0.55);
+  margin-bottom: 0.6rem;
+}
+
+.amds-rust-note {
+  color: #8892a4;
+  font-size: 0.55rem;
+}
+
+/* Target items */
+.amds-target-item {
+  padding: 0.5rem 0.65rem;
+  margin-bottom: 0.3rem;
+  border-radius: 3px;
+  transition: all 0.15s;
+}
+
+.amds-target-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.amds-target-name {
+  font-size: 0.75rem;
+  color: #e8edf5;
+  font-weight: 500;
+}
+
+.amds-target-type {
+  font-size: 0.6rem;
+  font-weight: 700;
+}
+
+.amds-target-meta {
+  font-size: 0.62rem;
+  color: #8892a4;
+  margin-top: 0.15rem;
+}
+
+/* Sliders */
+.amds-slider-row {
+  margin-bottom: 0.9rem;
+}
+
+.amds-slider-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.3rem;
+}
+
+.amds-slider-label {
+  font-size: 0.68rem;
+  color: #8892a4;
+}
+.amds-slider-val {
+  font-size: 0.68rem;
+  color: #68d391;
+  font-weight: 600;
+}
+
+.amds-slider {
+  width: 100%;
+  accent-color: #68d391;
+}
+
+/* DV rows */
+.amds-dv-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.3rem 0.5rem;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 2px;
+  margin-bottom: 0.4rem;
+}
+
+.amds-dv-key {
+  font-size: 0.65rem;
+  color: #8892a4;
+}
+.amds-dv-val {
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+.amds-dv-warning {
+  margin-top: 0.5rem;
+  padding: 0.4rem 0.5rem;
+  background: rgba(252, 129, 129, 0.08);
+  border: 1px solid rgba(252, 129, 129, 0.25);
+  border-radius: 3px;
+  font-size: 0.62rem;
+  color: #fc8181;
+}
+
+/* Launch area */
+.amds-launch-area {
+  padding: 0.9rem;
+  margin-top: auto;
+}
+
+.amds-btn {
+  width: 100%;
+  padding: 0.65rem;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  font-family: "DM Sans", sans-serif;
+  font-weight: 600;
+  transition: all 0.2s;
+}
+
+.amds-btn-reset {
+  background: rgba(99, 179, 237, 0.15);
+  border: 1px solid rgba(99, 179, 237, 0.4);
+  color: #63b3ed;
+}
+
+.amds-btn-launch {
+  background: rgba(104, 211, 145, 0.15);
+  border: 1px solid rgba(104, 211, 145, 0.45);
+  color: #68d391;
+}
+.amds-btn-launch.active {
+  background: rgba(104, 211, 145, 0.05);
+  border-color: rgba(104, 211, 145, 0.2);
+  cursor: not-allowed;
+}
+.amds-btn-launch.insufficient {
+  background: rgba(252, 129, 129, 0.08);
+  border-color: rgba(252, 129, 129, 0.2);
+  color: #fc8181;
+  cursor: not-allowed;
+}
+.amds-btn-launch:disabled {
+  opacity: 0.6;
+}
+
+/* ── VIEWPORT ── */
+.amds-viewport {
+  flex: 1;
+  position: relative;
+}
+
+.amds-canvas {
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+}
+
+.amds-telemetry-overlay {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.amds-telemetry-title {
+  font-size: 0.62rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgba(104, 211, 145, 0.5);
+  margin-bottom: 2px;
+}
+
+.amds-telemetry-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.amds-telemetry-key {
+  font-size: 0.6rem;
+  color: rgba(104, 211, 145, 0.45);
+  width: 65px;
+}
+
+.amds-telemetry-val {
+  font-size: 0.68rem;
+  color: #e8edf5;
+  font-weight: 500;
+}
+
+.amds-bars-overlay {
+  position: absolute;
+  bottom: 40px;
+  left: 12px;
+  width: 180px;
+  pointer-events: none;
+}
+
+.amds-bar-row {
+  margin-bottom: 8px;
+}
+
+.amds-bar-header {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 3px;
+}
+
+.amds-bar-label {
+  font-size: 0.6rem;
+  color: rgba(255, 255, 255, 0.4);
+  letter-spacing: 0.1em;
+}
+
+.amds-bar-val {
+  font-size: 0.6rem;
+  font-weight: 600;
+}
+
+.amds-bar-track {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 2px;
+}
+
+.amds-bar-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.4s ease;
+}
+
+.amds-hints {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 20px;
+  pointer-events: none;
+}
+
+.amds-hint {
+  font-size: 0.58rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(104, 211, 145, 0.3);
+}
+
+/* ── RIGHT PANEL ── */
+.amds-right-panel {
+  width: 260px;
+  background: rgba(3, 6, 8, 0.98);
+  border-left: 1px solid rgba(104, 211, 145, 0.1);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow-y: auto;
+}
+
+/* Gauges */
+.amds-gauges-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.5rem;
+}
+
+.amds-gauge {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(104, 211, 145, 0.08);
+  border-radius: 3px;
+  padding: 0.5rem;
+}
+
+.amds-gauge-label {
+  font-size: 0.58rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(104, 211, 145, 0.4);
+  margin-bottom: 0.25rem;
+}
+
+.amds-gauge-val {
+  font-size: 0.82rem;
+  font-weight: 700;
+  margin-bottom: 0.3rem;
+}
+
+.amds-gauge-track {
+  height: 3px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 2px;
+}
+
+.amds-gauge-fill {
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.4s ease;
+}
+
+/* Target profile */
+.amds-profile-name {
+  font-family: "DM Serif Display", serif;
+  font-size: 1rem;
+  color: #90cdf4;
+  margin-bottom: 0.5rem;
+}
+
+.amds-profile-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.25rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.amds-profile-key {
+  font-size: 0.65rem;
+  color: #8892a4;
+}
+.amds-profile-val {
+  font-size: 0.65rem;
+  font-weight: 600;
+}
+
+/* Mission log */
+.amds-log-section {
+  padding: 0.9rem;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-bottom: none;
+}
+
+.amds-log-entries {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-top: 0.6rem;
+}
+
+.amds-log-entry {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+
+.amds-log-time {
+  font-size: 0.58rem;
+  color: rgba(104, 211, 145, 0.4);
+  font-family: monospace;
+  flex-shrink: 0;
+  padding-top: 1px;
+}
+
+.amds-log-msg {
+  font-size: 0.65rem;
+  color: #8892a4;
+  line-height: 1.5;
+}
+.amds-log-msg.latest {
+  color: #e8edf5;
+}
+
+/* Scrollbars */
+::-webkit-scrollbar {
+  width: 3px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(104, 211, 145, 0.15);
+  border-radius: 2px;
+}

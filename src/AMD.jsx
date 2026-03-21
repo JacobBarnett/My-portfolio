@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
+import { useNavigate } from "react-router-dom";
 
 const NASA_URL =
   "https://ssd-api.jpl.nasa.gov/cad.api?dist-max=0.2&date-min=2025-01-01&date-max=2026-12-31&diameter=true&fullname=true&limit=60&sort=dist";
@@ -57,6 +58,8 @@ export default function AMD() {
   const hoveredMesh = useRef(null);
   const selectedMeshRef = useRef(null);
   const zoomAnimRef = useRef(null);
+
+  const navigate = useNavigate();
 
   const [asteroids, setAsteroids] = useState([]);
   const [filtered, setFiltered] = useState([]);
@@ -198,7 +201,7 @@ export default function AMD() {
       "https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-night.jpg",
     );
     const cloudTex = tl.load(
-      "https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-clouds.png",
+      "https://unpkg.com/three-globe/example/img/earth-clouds.png",
     );
 
     const earthMesh = new THREE.Mesh(
@@ -272,10 +275,9 @@ export default function AMD() {
     scene.add(new THREE.AmbientLight(0x112244, 0.5));
 
     // Animate
-    const clock = new THREE.Timer();
+    const clock = new THREE.Clock();
     const animate = () => {
       frameRef.current = requestAnimationFrame(animate);
-      clock.update();
       const t = clock.getElapsedTime();
       earthMesh.rotation.y = t * 0.05;
       cloudMesh.rotation.y = t * 0.06;
@@ -1221,6 +1223,28 @@ export default function AMD() {
                   )}
                   /100
                 </span>
+                <button
+                  onClick={() =>
+                    navigate("/mining", { state: { asteroid: selected } })
+                  }
+                  style={{
+                    marginTop: "0.75rem",
+                    width: "100%",
+                    padding: "0.7rem",
+                    background: "rgba(104,211,145,0.12)",
+                    border: "1px solid rgba(104,211,145,0.4)",
+                    color: "#68d391",
+                    borderRadius: 4,
+                    fontSize: "0.72rem",
+                    letterSpacing: "0.14em",
+                    textTransform: "uppercase",
+                    cursor: "pointer",
+                    fontFamily: "'DM Sans', sans-serif",
+                    fontWeight: 700,
+                  }}
+                >
+                  ▶ Plan Mission →
+                </button>
               </div>
             </div>
           ) : (
