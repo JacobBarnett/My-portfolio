@@ -316,9 +316,10 @@ export default function AMDS() {
     scene.add(particles);
     particlesRef.current = particles;
 
-    const clock = new THREE.Clock();
+    const clock = new THREE.Timer();
     const animate = () => {
       frameRef.current = requestAnimationFrame(animate);
+      clock.update();
       const t = clock.getElapsedTime();
       astMesh.rotation.y = t * 0.04;
       astMesh.rotation.x = t * 0.01;
