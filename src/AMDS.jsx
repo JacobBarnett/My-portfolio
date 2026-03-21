@@ -9,7 +9,9 @@ let wasmModule = null;
 async function loadWasm() {
   if (wasmModule) return wasmModule;
   try {
-    const mod = await import("../public/wasm/mining_physics.js");
+    const mod = await import(
+      /* webpackIgnore: true */ "/wasm/mining_physics.js"
+    );
     await mod.default();
     wasmModule = mod;
     return mod;
@@ -316,10 +318,9 @@ export default function AMDS() {
     scene.add(particles);
     particlesRef.current = particles;
 
-    const clock = new THREE.Timer();
+    const clock = new THREE.Clock();
     const animate = () => {
       frameRef.current = requestAnimationFrame(animate);
-      clock.update();
       const t = clock.getElapsedTime();
       astMesh.rotation.y = t * 0.04;
       astMesh.rotation.x = t * 0.01;
