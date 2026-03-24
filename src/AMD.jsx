@@ -3,8 +3,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { useNavigate } from "react-router-dom";
 
-const NASA_URL =
-  "https://thingproxy.freeboard.io/fetch/https://ssd-api.jpl.nasa.gov/cad.api?dist-max=0.2&date-min=2025-01-01&date-max=2026-12-31&diameter=true&fullname=true&limit=60&sort=dist";
+const NASA_URL = "/api/nasa";
 
 const SPECTRAL_PGM = {
   M: 92,
