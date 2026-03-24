@@ -4,7 +4,7 @@ import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { useNavigate } from "react-router-dom";
 
 const NASA_URL =
-  "https://api.allorigins.win/raw?url=" +
+  "https://corsproxy.io/?" +
   encodeURIComponent(
     "https://ssd-api.jpl.nasa.gov/cad.api?dist-max=0.2&date-min=2025-01-01&date-max=2026-12-31&diameter=true&fullname=true&limit=60&sort=dist",
   );
@@ -1224,29 +1224,29 @@ export default function AMD() {
                   )}
                   /100
                 </span>
-                <button
-                  onClick={() =>
-                    navigate("/mining", { state: { asteroid: selected } })
-                  }
-                  style={{
-                    marginTop: "0.75rem",
-                    width: "100%",
-                    padding: "0.7rem",
-                    background: "rgba(104,211,145,0.12)",
-                    border: "1px solid rgba(104,211,145,0.4)",
-                    color: "#68d391",
-                    borderRadius: 4,
-                    fontSize: "0.72rem",
-                    letterSpacing: "0.14em",
-                    textTransform: "uppercase",
-                    cursor: "pointer",
-                    fontFamily: "'DM Sans', sans-serif",
-                    fontWeight: 700,
-                  }}
-                >
-                  ▶ Plan Mission →
-                </button>
               </div>
+              <button
+                onClick={() =>
+                  navigate("/mining", { state: { asteroid: selected } })
+                }
+                style={{
+                  marginTop: "0.75rem",
+                  width: "100%",
+                  padding: "0.7rem",
+                  background: "rgba(104,211,145,0.12)",
+                  border: "1px solid rgba(104,211,145,0.4)",
+                  color: "#68d391",
+                  borderRadius: 4,
+                  fontSize: "0.72rem",
+                  letterSpacing: "0.14em",
+                  textTransform: "uppercase",
+                  cursor: "pointer",
+                  fontFamily: "'DM Sans', sans-serif",
+                  fontWeight: 700,
+                }}
+              >
+                ▶ Plan Mission →
+              </button>
             </div>
           ) : (
             <div
