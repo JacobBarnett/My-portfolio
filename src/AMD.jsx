@@ -204,7 +204,7 @@ export default function AMD() {
       "https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-night.jpg",
     );
     const cloudTex = tl.load(
-      "https://unpkg.com/three-globe@2.31.0/example/img/earth-clouds.png",
+      "https://raw.githubusercontent.com/vasturiano/three-globe/master/example/img/earth-clouds.png",
     );
 
     const earthMesh = new THREE.Mesh(
