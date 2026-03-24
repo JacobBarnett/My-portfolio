@@ -2,21 +2,15 @@
   "headers": [
     {
       "source": "/wasm/mining_physics.js",
-      "headers": [
-        {
-          "key": "Content-Type",
-          "value": "application/javascript"
-        }
-      ]
+      "headers": [{ "key": "Content-Type", "value": "application/javascript" }]
     },
     {
       "source": "/wasm/mining_physics_bg.wasm",
-      "headers": [
-        {
-          "key": "Content-Type",
-          "value": "application/wasm"
-        }
-      ]
+      "headers": [{ "key": "Content-Type", "value": "application/wasm" }]
     }
+  ],
+  "rewrites": [
+    { "source": "/wasm/(.*)", "destination": "/wasm/$1" },
+    { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
