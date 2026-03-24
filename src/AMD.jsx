@@ -203,9 +203,7 @@ export default function AMD() {
     const earthNightTex = tl.load(
       "https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-night.jpg",
     );
-    const cloudTex = tl.load(
-      "https://raw.githubusercontent.com/vasturiano/three-globe/master/example/img/earth-clouds.png",
-    );
+    const cloudTex = tl.load("/earth-clouds.png");
 
     const earthMesh = new THREE.Mesh(
       new THREE.SphereGeometry(1.6, 64, 64),
