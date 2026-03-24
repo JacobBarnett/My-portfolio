@@ -1,5 +1,12 @@
 {
   "rewrites": [
-    { "source": "/((?!static-wasm/).*)", "destination": "/index.html" }
+    { "source": "/", "destination": "/index.html" },
+    { "source": "/asteroids", "destination": "/index.html" },
+    { "source": "/mining", "destination": "/index.html" },
+    { "source": "/tesla", "destination": "/index.html" },
+    { "source": "/callback", "destination": "/index.html" },
+    { "source": "/tictactoe", "destination": "/index.html" },
+    { "source": "/connectfour", "destination": "/index.html" },
+    { "source": "/robotaxi", "destination": "/index.html" }
   ]
 }
