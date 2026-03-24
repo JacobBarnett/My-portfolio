@@ -12,7 +12,7 @@ async function loadWasm() {
     const mod = await import(
       /* webpackIgnore: true */ "/wasm/mining_physics.js"
     );
-    await mod.default();
+    await mod.default("/wasm/mining_physics_bg.wasm");
     wasmModule = mod;
     return mod;
   } catch (e) {
@@ -234,7 +234,7 @@ export default function AMDS() {
     scene.add(new THREE.AmbientLight(0x0a0f1a, 0.8));
 
     // Asteroid
-    const astGeo = new THREE.DodecahedronGeometry(1.4, 1);
+    const astGeo = new THREE.DodecahedronGeometry(1.4, 2);
     const pos = astGeo.attributes.position;
     for (let i = 0; i < pos.count; i++) {
       pos.setX(i, pos.getX(i) + (Math.random() - 0.5) * 0.3);
