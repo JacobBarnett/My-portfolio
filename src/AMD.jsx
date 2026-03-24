@@ -3,6 +3,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { useNavigate } from "react-router-dom";
 
+// eslint-disable-next-line
 const NASA_URL = "/api/nasa";
 
 const SPECTRAL_PGM = {
