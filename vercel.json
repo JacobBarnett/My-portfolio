@@ -1,5 +1,5 @@
 {
-  "cleanUrls": false,
-  "trailingSlash": false,
-  "rewrites": [{ "source": "/((?!wasm/).*)", "destination": "/index.html" }]
+  "rewrites": [
+    { "source": "/((?!static-wasm/).*)", "destination": "/index.html" }
+  ]
 }

@@ -10,9 +10,9 @@ async function loadWasm() {
   if (wasmModule) return wasmModule;
   try {
     const mod = await import(
-      /* webpackIgnore: true */ "/wasm/mining_physics.js"
+      /* webpackIgnore: true */ "/static-wasm/mining_physics.js"
     );
-    await mod.default("/wasm/mining_physics_bg.wasm");
+    await mod.default("/static-wasm/mining_physics_bg.wasm");
     wasmModule = mod;
     return mod;
   } catch (e) {
