@@ -1,5 +1,6 @@
-/callback/*  /index.html  200
-/tesla/*     /index.html  200
-/callback    /index.html  200
-/tesla       /index.html  200
-/*           /index.html  200
+/wasm/*      /wasm/:splat  200
+/callback/*  /index.html   200
+/tesla/*     /index.html   200
+/callback    /index.html   200
+/tesla       /index.html   200
+/*           /index.html   200
