@@ -73,7 +73,12 @@ export default function AMD() {
 
   // ── Fetch NASA data ──
   useEffect(() => {
-    fetch(NASA_URL)
+    const url =
+      window.location.hostname === "localhost"
+        ? "https://ssd-api.jpl.nasa.gov/cad.api?dist-max=0.2&date-min=2025-01-01&date-max=2026-12-31&diameter=true&fullname=true&limit=60&sort=dist"
+        : "/api/nasa";
+
+    fetch(url)
       .then((r) => r.json())
       .then((data) => {
         if (!data.data) {
