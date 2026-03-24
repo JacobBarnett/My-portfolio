@@ -1,13 +1,6 @@
 {
-  "headers": [
-    {
-      "source": "/wasm/mining_physics.js",
-      "headers": [{ "key": "Content-Type", "value": "application/javascript" }]
-    },
-    {
-      "source": "/wasm/mining_physics_bg.wasm",
-      "headers": [{ "key": "Content-Type", "value": "application/wasm" }]
-    }
-  ],
-  "rewrites": [{ "source": "/((?!wasm/).*)", "destination": "/index.html" }]
+  "routes": [
+    { "src": "/wasm/(.*)", "dest": "/wasm/$1" },
+    { "src": "/(.*)", "dest": "/index.html" }
+  ]
 }
