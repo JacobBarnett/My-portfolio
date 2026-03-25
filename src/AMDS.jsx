@@ -453,12 +453,12 @@ export default function AMDS() {
           if (ship?.userData?.thruster)
             ship.userData.thruster.material.emissiveIntensity = 0.3;
           if (particles) particles.material.opacity = 0.8;
-        }
-        // Attach ship to asteroid so it rotates with it
-        if (ship && asteroidMeshRef.current) {
-          asteroidMeshRef.current.add(ship);
-          ship.position.set(0.3, -1.2, 1.5);
-          ship.rotation.set(0, 0, 0);
+          // Attach ship to asteroid so it rotates with it
+          if (ship && asteroidMeshRef.current) {
+            asteroidMeshRef.current.add(ship);
+            ship.position.set(0.3, -1.2, 1.5);
+            ship.rotation.set(0, 0, 0);
+          }
         }
       } else if (phase === "MINING") {
         state.tick(15.0);
