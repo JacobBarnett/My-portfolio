@@ -242,12 +242,23 @@ export default function AMDS() {
       pos.setZ(i, pos.getZ(i) + (Math.random() - 0.5) * 0.3);
     }
     astGeo.computeVertexNormals();
+    const astLoader = new THREE.TextureLoader();
+    const astTexture = astLoader.load(
+      "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/textures/planets/moon_1024.jpg",
+    );
+    const astBump = astLoader.load(
+      "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/textures/planets/moon_1024.jpg",
+    );
+
     const astMesh = new THREE.Mesh(
       astGeo,
       new THREE.MeshStandardMaterial({
-        color: 0x7a6a55,
-        roughness: 0.95,
-        metalness: 0.35,
+        map: astTexture,
+        bumpMap: astBump,
+        bumpScale: 0.8,
+        roughness: 1.0,
+        metalness: 0.1,
+        color: 0x888880,
       }),
     );
     scene.add(astMesh);
