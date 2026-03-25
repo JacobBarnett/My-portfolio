@@ -234,14 +234,71 @@ export default function AMDS() {
     scene.add(new THREE.AmbientLight(0x0a0f1a, 0.8));
 
     // Asteroid
-    const astGeo = new THREE.DodecahedronGeometry(1.4, 2);
+    // ── ASTEROID SHAPES ── randomly pick one each load
+    const asteroidPresets = [
+      // Preset 1: Potato-shaped (like Eros)
+      {
+        lumpScale: [2.1, 1.8, 2.5, 2.2, 1.9, 2.4],
+        lumpAmp: [0.35, 0.28, 0.22],
+        noise: 0.06,
+        color: 0x999980,
+      },
+      // Preset 2: Rounder but cratered (like Vesta)
+      {
+        lumpScale: [3.2, 2.8, 3.5, 3.1, 2.9, 3.3],
+        lumpAmp: [0.12, 0.1, 0.08],
+        noise: 0.12,
+        color: 0x888878,
+      },
+      // Preset 3: Very lumpy/irregular (like Itokawa)
+      {
+        lumpScale: [1.4, 1.2, 1.8, 1.5, 1.3, 1.6],
+        lumpAmp: [0.45, 0.38, 0.3],
+        noise: 0.05,
+        color: 0xaaa890,
+      },
+      // Preset 4: Elongated (like a contact binary)
+      {
+        lumpScale: [1.0, 3.5, 1.2, 3.8, 1.1, 3.6],
+        lumpAmp: [0.55, 0.15, 0.12],
+        noise: 0.07,
+        color: 0x777768,
+      },
+      // Preset 5: Chunky with flat sides (like Bennu)
+      {
+        lumpScale: [2.8, 2.2, 2.5, 2.9, 2.3, 2.7],
+        lumpAmp: [0.2, 0.18, 0.22],
+        noise: 0.15,
+        color: 0x666658,
+      },
+    ];
+
+    const preset =
+      asteroidPresets[Math.floor(Math.random() * asteroidPresets.length)];
+    const astGeo = new THREE.SphereGeometry(1.4, 128, 128);
     const pos = astGeo.attributes.position;
     for (let i = 0; i < pos.count; i++) {
-      pos.setX(i, pos.getX(i) + (Math.random() - 0.5) * 0.3);
-      pos.setY(i, pos.getY(i) + (Math.random() - 0.5) * 0.3);
-      pos.setZ(i, pos.getZ(i) + (Math.random() - 0.5) * 0.3);
+      const x = pos.getX(i);
+      const y = pos.getY(i);
+      const z = pos.getZ(i);
+      const lump1 =
+        Math.sin(x * preset.lumpScale[0]) *
+        Math.cos(y * preset.lumpScale[1]) *
+        preset.lumpAmp[0];
+      const lump2 =
+        Math.sin(y * preset.lumpScale[2]) *
+        Math.cos(z * preset.lumpScale[3]) *
+        preset.lumpAmp[1];
+      const lump3 =
+        Math.sin(z * preset.lumpScale[4]) *
+        Math.cos(x * preset.lumpScale[5]) *
+        preset.lumpAmp[2];
+      const noise = (Math.random() - 0.5) * preset.noise;
+      const scale = 1 + lump1 + lump2 + lump3 + noise;
+      pos.setXYZ(i, x * scale, y * scale, z * scale);
     }
     astGeo.computeVertexNormals();
+
     const astLoader = new THREE.TextureLoader();
     const astTexture = astLoader.load(
       "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/textures/planets/moon_1024.jpg",
@@ -255,14 +312,13 @@ export default function AMDS() {
       new THREE.MeshStandardMaterial({
         map: astTexture,
         bumpMap: astBump,
-        bumpScale: 0.8,
+        bumpScale: 1.2,
         roughness: 1.0,
-        metalness: 0.1,
-        color: 0x888880,
+        metalness: 0.05,
+        color: preset.color,
       }),
     );
     scene.add(astMesh);
-
     // Spacecraft
     const shipGroup = new THREE.Group();
     shipGroup.add(

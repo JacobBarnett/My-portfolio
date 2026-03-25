@@ -245,7 +245,7 @@ export default function AMD() {
 
     // ── MOON ──
     const moonTex = tl.load(
-      "https://cdn.jsdelivr.net/npm/three-globe/example/img/earth-topology.png",
+      "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/textures/planets/moon_1024.jpg",
     );
     const moon = new THREE.Mesh(
       new THREE.SphereGeometry(0.22, 32, 32),
