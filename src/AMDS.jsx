@@ -545,7 +545,14 @@ export default function AMDS() {
     setMissionActive(false);
     setMissionPhase("STANDBY");
     setLog([{ t: "00:00", msg: "System reset. Awaiting launch." }]);
-    if (shipRef.current) shipRef.current.position.set(0, 0.5, 4);
+
+    // Detach ship from asteroid and put back in scene
+    if (shipRef.current && sceneRef.current) {
+      sceneRef.current.add(shipRef.current);
+      shipRef.current.position.set(0, 0.5, 4);
+      shipRef.current.rotation.set(0, 0, 0);
+    }
+
     if (shipRef.current?.userData?.thruster)
       shipRef.current.userData.thruster.material.emissiveIntensity = 0;
     if (particlesRef.current) particlesRef.current.material.opacity = 0;
