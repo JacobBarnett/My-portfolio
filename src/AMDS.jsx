@@ -86,6 +86,7 @@ export default function AMDS() {
   const missionStateRef = useRef(null);
   const wasmRef = useRef(null);
   const tickRef = useRef(null);
+  const asteroidMeshRef = useRef(null);
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -319,6 +320,7 @@ export default function AMDS() {
       }),
     );
     scene.add(astMesh);
+    asteroidMeshRef.current = astMesh;
     // Spacecraft
     const shipGroup = new THREE.Group();
     shipGroup.add(
@@ -452,8 +454,23 @@ export default function AMDS() {
             ship.userData.thruster.material.emissiveIntensity = 0.3;
           if (particles) particles.material.opacity = 0.8;
         }
+        // Attach ship to asteroid so it rotates with it
+        if (ship && asteroidMeshRef.current) {
+          asteroidMeshRef.current.add(ship);
+          ship.position.set(0.3, -1.2, 1.5);
+          ship.rotation.set(0, 0, 0);
+        }
       } else if (phase === "MINING") {
-        state.tick(3.0);
+        state.tick(15.0);
+
+        // Lock ship to asteroid surface
+        if (ship && asteroidMeshRef.current) {
+          ship.position.x = asteroidMeshRef.current.position.x + 0.3;
+          ship.position.y = asteroidMeshRef.current.position.y - 1.2;
+          ship.position.z = asteroidMeshRef.current.position.z + 1.5;
+          ship.rotation.y = asteroidMeshRef.current.rotation.y;
+        }
+
         if (particles) {
           const p = particles.geometry.attributes.position;
           for (let i = 0; i < p.count; i++) {
@@ -488,6 +505,13 @@ export default function AMDS() {
               ? "Ore capacity reached. Returning to base."
               : "Low fuel warning. Aborting mining.",
           );
+          // Detach ship from asteroid
+          if (ship && asteroidMeshRef.current && sceneRef.current) {
+            const worldPos = new THREE.Vector3();
+            ship.getWorldPosition(worldPos);
+            sceneRef.current.add(ship);
+            ship.position.copy(worldPos);
+          }
           if (particles) particles.material.opacity = 0;
           if (ship?.userData?.thruster)
             ship.userData.thruster.material.emissiveIntensity = 2.0;
@@ -513,7 +537,7 @@ export default function AMDS() {
             ship.userData.thruster.material.emissiveIntensity = 0;
         }
       }
-    }, 400);
+    }, 185);
   }, [wasmReady, selectedAsteroid, shipConfig, telemetry.transfer_dv, addLog]);
 
   const resetMission = useCallback(() => {
