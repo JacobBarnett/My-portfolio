@@ -455,8 +455,14 @@ export default function AMDS() {
           if (particles) particles.material.opacity = 0.8;
           // Attach ship to asteroid so it rotates with it
           if (ship && asteroidMeshRef.current) {
+            // Get ship's current world position before parenting
+            const worldPos = new THREE.Vector3();
+            ship.getWorldPosition(worldPos);
+            // Parent ship to asteroid
             asteroidMeshRef.current.add(ship);
-            ship.position.set(0.3, -1.2, 1.5);
+            // Convert world position to asteroid's local space
+            asteroidMeshRef.current.worldToLocal(worldPos);
+            ship.position.copy(worldPos);
             ship.rotation.set(0, 0, 0);
           }
         }
