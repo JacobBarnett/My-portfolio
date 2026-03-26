@@ -128,6 +128,8 @@ export default function Portfolio() {
                   "HTML5",
                   "CSS3",
                   "Redux",
+                  "Tailwind CSS",
+                  "Three.js",
                   "Responsive Design",
                 ].map((s) => (
                   <span className="skill-tag" key={s}>
@@ -147,6 +149,8 @@ export default function Portfolio() {
                   "SQL",
                   "Knex.js",
                   "Authentication / JWT",
+                  "Serverless Functions",
+                  "API Design",
                 ].map((s) => (
                   <span className="skill-tag" key={s}>
                     {s}
@@ -161,9 +165,31 @@ export default function Portfolio() {
                 {[
                   "Git & GitHub",
                   "VS Code",
+                  "Vercel",
                   "Command Line",
                   "Agile / Scrum",
                   "Testing",
+                  "Figma",
+                  "Performance Optimization",
+                ].map((s) => (
+                  <span className="skill-tag" key={s}>
+                    {s}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <div className="skill-category reveal">
+              <div className="skill-cat-title">Emerging Tech</div>
+              <div className="skill-tags">
+                {[
+                  "Rust",
+                  "WebAssembly (WASM)",
+                  "Three.js / WebGL",
+                  "Real-Time Data",
+                  "NASA APIs",
+                  "Physics Simulation",
+                  "REST API Integration",
                 ].map((s) => (
                   <span className="skill-tag" key={s}>
                     {s}
@@ -184,9 +210,8 @@ export default function Portfolio() {
           </div>
           <div className="projects-grid">
             {/* Tesla UI */}
-            <div className="project-card project-card--featured reveal">
+            <div className="project-card reveal">
               <div className="project-number">01</div>
-              <div className="project-featured-badge">Featured</div>
               <div className="project-tag">React · Spotify API · Dashboard</div>
               <h3 className="project-title">Tesla Car UI</h3>
               <p className="project-desc">
@@ -248,14 +273,12 @@ export default function Portfolio() {
               </div>
             </div>
 
-            {/* AstroForge — Asteroid Target Dashboard */}
-            <div className="project-card project-card--space reveal">
+            {/* AstroForge — Asteroid Mining Dashboard */}
+            <div className="project-card project-card--featured reveal">
               <div className="project-number">03</div>
-              <div className="project-featured-badge project-featured-badge--space">
-                New
-              </div>
+              <div className="project-featured-badge">Featured</div>
               <div className="project-tag">
-                React · Three.js · NASA API · D3
+                React · Three.js · Rust · NASA API
               </div>
               <h3 className="project-title">Asteroid Mining Dashboard</h3>
               <p className="project-desc">
