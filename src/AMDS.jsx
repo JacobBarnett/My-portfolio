@@ -69,10 +69,43 @@ const pgmColor = (s) => (s >= 70 ? "#63b3ed" : s >= 40 ? "#c8a96e" : "#8892a4");
 const PHASE_COLORS = {
   STANDBY: "#8892a4",
   TRANSIT: "#c8a96e",
-  MINING: "#68d391",
+  APPROACH: "#f6ad55",
+  ANCHORING: "#fc8181",
+  DRILLING: "#68d391",
+  EXTRACTING: "#63b3ed",
   RETURNING: "#fc8181",
   COMPLETE: "#63b3ed",
 };
+
+// Manual mode steps in order
+const MANUAL_STEPS = [
+  {
+    key: "TRANSIT",
+    label: "▶ Execute Transfer Burn",
+    desc: "Fire thrusters toward target",
+  },
+  {
+    key: "APPROACH",
+    label: "⊕ Begin Approach",
+    desc: "Match asteroid rotation, slow down",
+  },
+  {
+    key: "ANCHORING",
+    label: "⚓ Deploy Anchors",
+    desc: "Harpoon into surface — zero-G lock",
+  },
+  { key: "DRILLING", label: "⛏ Begin Drilling", desc: "Activate drill head" },
+  {
+    key: "EXTRACTING",
+    label: "◉ Transfer Ore to Hold",
+    desc: "Move extracted material to storage",
+  },
+  {
+    key: "RETURNING",
+    label: "← Execute Return Burn",
+    desc: "Release anchors, fire for home",
+  },
+];
 
 export default function AMDS() {
   const mountRef = useRef(null);
@@ -100,6 +133,17 @@ export default function AMDS() {
   });
   const [missionActive, setMissionActive] = useState(false);
   const [missionPhase, setMissionPhase] = useState("STANDBY");
+  const [manualMode, setManualMode] = useState(false);
+  const [manualStep, setManualStep] = useState(0); // index into MANUAL_STEPS
+  const [manualPhase, setManualPhase] = useState("STANDBY");
+  const [awaitingConfirm, setAwaitingConfirm] = useState(false);
+  const [commDelay, setCommDelay] = useState(0); // simulated signal delay in seconds
+  const [systemStatus, setSystemStatus] = useState({
+    power: 98,
+    thermal: 72,
+    attitude: "NOMINAL",
+    signal: 100,
+  });
   const [telemetry, setTelemetry] = useState({
     fuel_kg: 800,
     ore_kg: 0,
@@ -137,6 +181,12 @@ export default function AMDS() {
     }
   }, [location.state]);
 
+  // ── Update comm delay based on selected asteroid ──
+  useEffect(() => {
+    const delay = Math.round(selectedAsteroid.dist_km / 300000 / 60); // light-minutes
+    setCommDelay(delay);
+  }, [selectedAsteroid]);
+
   // ── Load WASM ──
   useEffect(() => {
     loadWasm().then((mod) => {
@@ -147,7 +197,7 @@ export default function AMDS() {
     });
   }, []);
 
-  // ── Init WASM state when config/asteroid changes ──
+  // ── Init WASM state ──
   useEffect(() => {
     if (!wasmReady || !wasmRef.current) return;
     try {
@@ -172,6 +222,29 @@ export default function AMDS() {
       console.error("WASM init error:", e);
     }
   }, [wasmReady, shipConfig, selectedAsteroid]);
+
+  // ── Simulate system status fluctuations ──
+  useEffect(() => {
+    if (!missionActive) return;
+    const interval = setInterval(() => {
+      setSystemStatus((prev) => ({
+        power: Math.max(
+          20,
+          Math.min(100, prev.power + (Math.random() - 0.52) * 2),
+        ),
+        thermal: Math.max(
+          40,
+          Math.min(110, prev.thermal + (Math.random() - 0.48) * 3),
+        ),
+        attitude: prev.thermal > 95 ? "WARNING" : "NOMINAL",
+        signal: Math.max(
+          30,
+          Math.min(100, prev.signal + (Math.random() - 0.5) * 4),
+        ),
+      }));
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [missionActive]);
 
   // ── Three.js scene ──
   useEffect(() => {
@@ -228,44 +301,37 @@ export default function AMDS() {
       ),
     );
 
-    // Lighting
     const sunLight = new THREE.DirectionalLight(0xfff5e0, 2.5);
     sunLight.position.set(20, 10, 15);
     scene.add(sunLight);
     scene.add(new THREE.AmbientLight(0x0a0f1a, 0.8));
 
-    // Asteroid
-    // ── ASTEROID SHAPES ── randomly pick one each load
+    // Asteroid presets
     const asteroidPresets = [
-      // Preset 1: Potato-shaped (like Eros)
       {
         lumpScale: [2.1, 1.8, 2.5, 2.2, 1.9, 2.4],
         lumpAmp: [0.35, 0.28, 0.22],
         noise: 0.06,
         color: 0x999980,
       },
-      // Preset 2: Rounder but cratered (like Vesta)
       {
         lumpScale: [3.2, 2.8, 3.5, 3.1, 2.9, 3.3],
         lumpAmp: [0.12, 0.1, 0.08],
         noise: 0.12,
         color: 0x888878,
       },
-      // Preset 3: Very lumpy/irregular (like Itokawa)
       {
         lumpScale: [1.4, 1.2, 1.8, 1.5, 1.3, 1.6],
         lumpAmp: [0.45, 0.38, 0.3],
         noise: 0.05,
         color: 0xaaa890,
       },
-      // Preset 4: Elongated (like a contact binary)
       {
         lumpScale: [1.0, 3.5, 1.2, 3.8, 1.1, 3.6],
         lumpAmp: [0.55, 0.15, 0.12],
         noise: 0.07,
         color: 0x777768,
       },
-      // Preset 5: Chunky with flat sides (like Bennu)
       {
         lumpScale: [2.8, 2.2, 2.5, 2.9, 2.3, 2.7],
         lumpAmp: [0.2, 0.18, 0.22],
@@ -279,9 +345,9 @@ export default function AMDS() {
     const astGeo = new THREE.SphereGeometry(1.4, 128, 128);
     const pos = astGeo.attributes.position;
     for (let i = 0; i < pos.count; i++) {
-      const x = pos.getX(i);
-      const y = pos.getY(i);
-      const z = pos.getZ(i);
+      const x = pos.getX(i),
+        y = pos.getY(i),
+        z = pos.getZ(i);
       const lump1 =
         Math.sin(x * preset.lumpScale[0]) *
         Math.cos(y * preset.lumpScale[1]) *
@@ -321,6 +387,7 @@ export default function AMDS() {
     );
     scene.add(astMesh);
     asteroidMeshRef.current = astMesh;
+
     // Spacecraft
     const shipGroup = new THREE.Group();
     shipGroup.add(
@@ -421,7 +488,28 @@ export default function AMDS() {
     };
   }, []);
 
-  // ── Mission tick ──
+  // ── Attach / detach helpers ──
+  const attachShip = useCallback(() => {
+    const ship = shipRef.current;
+    if (!ship || !asteroidMeshRef.current) return;
+    const worldPos = new THREE.Vector3();
+    ship.getWorldPosition(worldPos);
+    asteroidMeshRef.current.add(ship);
+    asteroidMeshRef.current.worldToLocal(worldPos);
+    ship.position.copy(worldPos);
+    ship.rotation.set(0, 0, 0);
+  }, []);
+
+  const detachShip = useCallback(() => {
+    const ship = shipRef.current;
+    if (!ship || !sceneRef.current) return;
+    const worldPos = new THREE.Vector3();
+    ship.getWorldPosition(worldPos);
+    sceneRef.current.add(ship);
+    ship.position.copy(worldPos);
+  }, []);
+
+  // ── AUTO MODE mission ──
   const startMission = useCallback(() => {
     if (!wasmReady || !missionStateRef.current) return;
     setMissionActive(true);
@@ -453,30 +541,17 @@ export default function AMDS() {
           if (ship?.userData?.thruster)
             ship.userData.thruster.material.emissiveIntensity = 0.3;
           if (particles) particles.material.opacity = 0.8;
-          // Attach ship to asteroid so it rotates with it
           if (ship && asteroidMeshRef.current) {
-            // Get ship's current world position before parenting
             const worldPos = new THREE.Vector3();
             ship.getWorldPosition(worldPos);
-            // Parent ship to asteroid
             asteroidMeshRef.current.add(ship);
-            // Convert world position to asteroid's local space
             asteroidMeshRef.current.worldToLocal(worldPos);
             ship.position.copy(worldPos);
             ship.rotation.set(0, 0, 0);
           }
         }
       } else if (phase === "MINING") {
-        state.tick(15.0);
-
-        // Lock ship to asteroid surface
-        if (ship && asteroidMeshRef.current) {
-          ship.position.x = asteroidMeshRef.current.position.x + 0.3;
-          ship.position.y = asteroidMeshRef.current.position.y - 1.2;
-          ship.position.z = asteroidMeshRef.current.position.z + 1.5;
-          ship.rotation.y = asteroidMeshRef.current.rotation.y;
-        }
-
+        state.tick(6.0);
         if (particles) {
           const p = particles.geometry.attributes.position;
           for (let i = 0; i < p.count; i++) {
@@ -511,13 +586,7 @@ export default function AMDS() {
               ? "Ore capacity reached. Returning to base."
               : "Low fuel warning. Aborting mining.",
           );
-          // Detach ship from asteroid
-          if (ship && asteroidMeshRef.current && sceneRef.current) {
-            const worldPos = new THREE.Vector3();
-            ship.getWorldPosition(worldPos);
-            sceneRef.current.add(ship);
-            ship.position.copy(worldPos);
-          }
+          detachShip();
           if (particles) particles.material.opacity = 0;
           if (ship?.userData?.thruster)
             ship.userData.thruster.material.emissiveIntensity = 2.0;
@@ -543,22 +612,186 @@ export default function AMDS() {
             ship.userData.thruster.material.emissiveIntensity = 0;
         }
       }
-    }, 185);
-  }, [wasmReady, selectedAsteroid, shipConfig, telemetry.transfer_dv, addLog]);
+    }, 200);
+  }, [
+    wasmReady,
+    selectedAsteroid,
+    shipConfig,
+    telemetry.transfer_dv,
+    addLog,
+    detachShip,
+  ]);
+
+  // ── MANUAL MODE ──
+  const startManualMission = useCallback(() => {
+    if (!wasmReady || !missionStateRef.current) return;
+    setMissionActive(true);
+    setManualStep(0);
+    setManualPhase("STANDBY");
+    setAwaitingConfirm(true);
+    addLog("Manual mode active. Awaiting operator commands.");
+    addLog(`Signal delay: ${commDelay} min each way`);
+  }, [wasmReady, addLog, commDelay]);
+
+  const executeManualStep = useCallback(() => {
+    const step = MANUAL_STEPS[manualStep];
+    if (!step) return;
+
+    setAwaitingConfirm(false);
+    setManualPhase(step.key);
+    setMissionPhase(step.key);
+    addLog(`CMD SENT: ${step.label}`);
+    addLog(`Signal delay: ~${commDelay}min. Awaiting confirmation...`);
+
+    const ship = shipRef.current;
+    const particles = particlesRef.current;
+    const state = missionStateRef.current;
+
+    // Simulate comm delay then execute
+    setTimeout(
+      () => {
+        addLog(`ACK: ${step.label} confirmed.`);
+
+        if (step.key === "TRANSIT") {
+          let transitProgress = 0;
+          if (ship?.userData?.thruster)
+            ship.userData.thruster.material.emissiveIntensity = 2.0;
+          tickRef.current = setInterval(() => {
+            transitProgress += 0.015;
+            if (ship) {
+              ship.position.z = 4 - transitProgress * 2.5;
+              ship.position.y = 0.5 + Math.sin(transitProgress * Math.PI) * 0.3;
+            }
+            if (transitProgress >= 1) {
+              clearInterval(tickRef.current);
+              if (ship?.userData?.thruster)
+                ship.userData.thruster.material.emissiveIntensity = 0.2;
+              addLog("Transit complete. In approach corridor.");
+              setManualStep((s) => s + 1);
+              setAwaitingConfirm(true);
+            }
+          }, 200);
+        } else if (step.key === "APPROACH") {
+          addLog("Matching rotation rate... approach nominal.");
+          setTimeout(() => {
+            addLog("Rendezvous achieved. Ready for anchor deployment.");
+            setManualStep((s) => s + 1);
+            setAwaitingConfirm(true);
+          }, 3000);
+        } else if (step.key === "ANCHORING") {
+          addLog("Harpoon fired. Tether tensioning...");
+          setTimeout(() => {
+            attachShip();
+            if (particles) particles.material.opacity = 0.3;
+            addLog("Anchors locked. Surface contact confirmed.");
+            setManualStep((s) => s + 1);
+            setAwaitingConfirm(true);
+          }, 2500);
+        } else if (step.key === "DRILLING") {
+          addLog("Drill head deploying... surface contact.");
+          setTimeout(() => {
+            if (particles) particles.material.opacity = 0.7;
+            addLog("Drilling active. Core sample depth: 2.4m");
+            setManualStep((s) => s + 1);
+            setAwaitingConfirm(true);
+          }, 2000);
+        } else if (step.key === "EXTRACTING") {
+          // Run extraction ticks
+          if (particles) particles.material.opacity = 0.9;
+          addLog("Extraction pipeline active.");
+          tickRef.current = setInterval(() => {
+            if (!state) return;
+            state.tick(6.0);
+            const p = particles?.geometry?.attributes?.position;
+            if (p) {
+              for (let i = 0; i < p.count; i++) {
+                p.setX(i, p.getX(i) + (Math.random() - 0.5) * 0.02);
+                p.setY(i, p.getY(i) + Math.random() * 0.03);
+                p.setZ(i, p.getZ(i) + (Math.random() - 0.5) * 0.02);
+                if (Math.abs(p.getY(i)) > 0.8) {
+                  p.setX(i, (Math.random() - 0.5) * 0.3);
+                  p.setY(i, -0.3);
+                  p.setZ(i, (Math.random() - 0.5) * 0.3);
+                }
+              }
+              p.needsUpdate = true;
+            }
+            setTelemetry({
+              fuel_kg: Math.round(state.fuel_kg * 10) / 10,
+              ore_kg: Math.round(state.ore_kg * 10) / 10,
+              delta_v: Math.round(state.delta_v()),
+              transfer_dv: Math.round(state.transfer_delta_v()),
+              mission_score: Math.round(state.mission_score()),
+              time_to_capacity: Math.round(
+                state.time_to_capacity(shipConfig.ore_capacity),
+              ),
+              mission_time_s: Math.round(state.mission_time_s),
+              extraction_rate: state.extraction_rate,
+            });
+            if (
+              state.ore_kg >= shipConfig.ore_capacity ||
+              state.fuel_kg <= 10
+            ) {
+              clearInterval(tickRef.current);
+              if (particles) particles.material.opacity = 0;
+              addLog(`Hold capacity reached: ${Math.round(state.ore_kg)} kg.`);
+              addLog("Ready for return burn.");
+              setManualStep((s) => s + 1);
+              setAwaitingConfirm(true);
+            }
+          }, 200);
+        } else if (step.key === "RETURNING") {
+          detachShip();
+          if (ship?.userData?.thruster)
+            ship.userData.thruster.material.emissiveIntensity = 2.0;
+          if (particles) particles.material.opacity = 0;
+          addLog("Anchors released. Return burn initiated.");
+          let retProgress = 1;
+          tickRef.current = setInterval(() => {
+            retProgress -= 0.015;
+            if (ship) {
+              ship.position.z = 4 - retProgress * 2.5;
+              ship.position.y = 0.5 + Math.sin(retProgress * Math.PI) * 0.3;
+            }
+            if (retProgress <= 0) {
+              clearInterval(tickRef.current);
+              if (ship?.userData?.thruster)
+                ship.userData.thruster.material.emissiveIntensity = 0;
+              setMissionPhase("COMPLETE");
+              setManualPhase("COMPLETE");
+              setMissionActive(false);
+              addLog(
+                `Mission complete! Score: ${Math.round(state?.mission_score() ?? 0)}/100`,
+              );
+              addLog(`Ore recovered: ${Math.round(state?.ore_kg ?? 0)} kg`);
+            }
+          }, 200);
+        }
+      },
+      commDelay > 0 ? 1500 : 800,
+    );
+  }, [manualStep, commDelay, attachShip, detachShip, shipConfig, addLog]);
 
   const resetMission = useCallback(() => {
     clearInterval(tickRef.current);
     setMissionActive(false);
     setMissionPhase("STANDBY");
+    setManualStep(0);
+    setManualPhase("STANDBY");
+    setAwaitingConfirm(false);
     setLog([{ t: "00:00", msg: "System reset. Awaiting launch." }]);
+    setSystemStatus({
+      power: 98,
+      thermal: 72,
+      attitude: "NOMINAL",
+      signal: 100,
+    });
 
-    // Detach ship from asteroid and put back in scene
     if (shipRef.current && sceneRef.current) {
       sceneRef.current.add(shipRef.current);
       shipRef.current.position.set(0, 0.5, 4);
       shipRef.current.rotation.set(0, 0, 0);
     }
-
     if (shipRef.current?.userData?.thruster)
       shipRef.current.userData.thruster.material.emissiveIntensity = 0;
     if (particlesRef.current) particlesRef.current.material.opacity = 0;
@@ -587,10 +820,13 @@ export default function AMDS() {
     }
   }, [shipConfig, selectedAsteroid]);
 
-  const phaseColor = PHASE_COLORS[missionPhase];
+  const phaseColor = PHASE_COLORS[missionPhase] ?? "#8892a4";
   const fuelPct = Math.round((telemetry.fuel_kg / shipConfig.fuel_kg) * 100);
   const orePct = Math.round((telemetry.ore_kg / shipConfig.ore_capacity) * 100);
   const dvSufficient = telemetry.delta_v >= telemetry.transfer_dv;
+
+  const currentManualStep = MANUAL_STEPS[manualStep];
+  const isComplete = missionPhase === "COMPLETE" || manualPhase === "COMPLETE";
 
   return (
     <div className="amds-root">
@@ -621,6 +857,17 @@ export default function AMDS() {
             {missionPhase}
           </div>
           {wasmReady && <div className="amds-wasm-badge">⚙ RUST WASM</div>}
+          {commDelay > 0 && (
+            <div
+              style={{
+                fontSize: "0.6rem",
+                color: "rgba(200,169,110,0.7)",
+                letterSpacing: "0.1em",
+              }}
+            >
+              📡 {commDelay}min signal delay
+            </div>
+          )}
         </div>
         <div className="amds-topbar-right">
           {[
@@ -779,16 +1026,137 @@ export default function AMDS() {
             )}
           </div>
 
-          {/* Launch */}
+          {/* Mode toggle + launch */}
           <div className="amds-launch-area">
-            {missionPhase === "COMPLETE" ? (
+            {/* Mode toggle */}
+            {!missionActive && !isComplete && (
+              <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
+                {["Auto", "Manual"].map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => setManualMode(m === "Manual")}
+                    style={{
+                      flex: 1,
+                      padding: "0.35rem",
+                      borderRadius: 3,
+                      cursor: "pointer",
+                      fontSize: "0.65rem",
+                      letterSpacing: "0.1em",
+                      textTransform: "uppercase",
+                      fontFamily: "'DM Sans', sans-serif",
+                      fontWeight: 600,
+                      background:
+                        (m === "Manual") === manualMode
+                          ? "rgba(104,211,145,0.15)"
+                          : "rgba(255,255,255,0.03)",
+                      border: `1px solid ${(m === "Manual") === manualMode ? "rgba(104,211,145,0.4)" : "rgba(104,211,145,0.1)"}`,
+                      color:
+                        (m === "Manual") === manualMode ? "#68d391" : "#8892a4",
+                    }}
+                  >
+                    {m}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {isComplete ? (
               <button
                 className="amds-btn amds-btn-reset"
                 onClick={resetMission}
               >
                 ↺ New Mission
               </button>
+            ) : manualMode ? (
+              // MANUAL MODE UI
+              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                {!missionActive ? (
+                  <button
+                    className="amds-btn amds-btn-launch"
+                    disabled={!wasmReady || !dvSufficient}
+                    onClick={startManualMission}
+                  >
+                    {!wasmReady ? "Loading WASM..." : "▶ Begin Manual Mission"}
+                  </button>
+                ) : awaitingConfirm && currentManualStep ? (
+                  <div>
+                    <div
+                      style={{
+                        fontSize: "0.6rem",
+                        color: "rgba(104,211,145,0.5)",
+                        letterSpacing: "0.12em",
+                        marginBottom: 4,
+                      }}
+                    >
+                      NEXT COMMAND
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "0.7rem",
+                        color: "#e8edf5",
+                        marginBottom: 4,
+                      }}
+                    >
+                      {currentManualStep.desc}
+                    </div>
+                    <button
+                      onClick={executeManualStep}
+                      style={{
+                        width: "100%",
+                        padding: "0.6rem",
+                        borderRadius: 4,
+                        cursor: "pointer",
+                        background: "rgba(104,211,145,0.15)",
+                        border: "1px solid rgba(104,211,145,0.45)",
+                        color: "#68d391",
+                        fontSize: "0.68rem",
+                        letterSpacing: "0.1em",
+                        textTransform: "uppercase",
+                        fontFamily: "'DM Sans', sans-serif",
+                        fontWeight: 700,
+                      }}
+                    >
+                      {currentManualStep.label}
+                    </button>
+                  </div>
+                ) : (
+                  <div
+                    style={{
+                      fontSize: "0.7rem",
+                      color: "#c8a96e",
+                      textAlign: "center",
+                      padding: "0.5rem",
+                    }}
+                  >
+                    ◉ Executing command...
+                  </div>
+                )}
+
+                {/* Step progress */}
+                {missionActive && (
+                  <div style={{ display: "flex", gap: 3, marginTop: 4 }}>
+                    {MANUAL_STEPS.map((s, i) => (
+                      <div
+                        key={s.key}
+                        title={s.key}
+                        style={{
+                          flex: 1,
+                          height: 3,
+                          borderRadius: 2,
+                          background:
+                            i < manualStep
+                              ? "#68d391"
+                              : i === manualStep
+                                ? "#c8a96e"
+                                : "rgba(255,255,255,0.08)",
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
             ) : (
+              // AUTO MODE
               <button
                 className={`amds-btn amds-btn-launch${missionActive ? " active" : !dvSufficient ? " insufficient" : ""}`}
                 disabled={!wasmReady || missionActive || !dvSufficient}
@@ -808,7 +1176,6 @@ export default function AMDS() {
         <div className="amds-viewport">
           <div ref={mountRef} className="amds-canvas" />
 
-          {/* Telemetry overlay */}
           <div className="amds-telemetry-overlay">
             <div className="amds-telemetry-title">Live Telemetry</div>
             {[
@@ -821,6 +1188,7 @@ export default function AMDS() {
                 label: "Mission Time",
                 val: `${Math.floor(telemetry.mission_time_s / 3600)}h ${Math.floor((telemetry.mission_time_s % 3600) / 60)}m`,
               },
+              { label: "Signal", val: `${Math.round(systemStatus.signal)}%` },
             ].map(({ label, val }) => (
               <div key={label} className="amds-telemetry-row">
                 <span className="amds-telemetry-key">{label}</span>
@@ -829,7 +1197,6 @@ export default function AMDS() {
             ))}
           </div>
 
-          {/* Fuel/ore bars */}
           <div className="amds-bars-overlay">
             {[
               {
@@ -877,7 +1244,7 @@ export default function AMDS() {
 
         {/* RIGHT PANEL */}
         <div className="amds-right-panel">
-          {/* Gauges */}
+          {/* System status */}
           <div className="amds-section">
             <span className="amds-section-label">Systems Status</span>
             <div className="amds-gauges-grid">
@@ -895,9 +1262,23 @@ export default function AMDS() {
                   color: "#c8a96e",
                 },
                 {
+                  label: "Power",
+                  val: `${Math.round(systemStatus.power)}%`,
+                  pct: systemStatus.power,
+                  color: systemStatus.power > 50 ? "#68d391" : "#fc8181",
+                },
+                {
+                  label: "Thermal",
+                  val: `${Math.round(systemStatus.thermal)}°C`,
+                  pct: Math.min(100, systemStatus.thermal),
+                  color: systemStatus.thermal > 90 ? "#fc8181" : "#63b3ed",
+                },
+                {
                   label: "Extraction",
                   val: `${telemetry.extraction_rate} kg/s`,
-                  pct: missionPhase === "MINING" ? 100 : 0,
+                  pct: ["MINING", "EXTRACTING"].includes(missionPhase)
+                    ? 100
+                    : 0,
                   color: "#63b3ed",
                 },
                 {
@@ -921,6 +1302,32 @@ export default function AMDS() {
                 </div>
               ))}
             </div>
+
+            {/* Attitude indicator */}
+            <div
+              style={{
+                marginTop: 8,
+                display: "flex",
+                justifyContent: "space-between",
+                padding: "0.3rem 0.4rem",
+                background: "rgba(255,255,255,0.02)",
+                borderRadius: 3,
+              }}
+            >
+              <span style={{ fontSize: "0.6rem", color: "#8892a4" }}>
+                Attitude Control
+              </span>
+              <span
+                style={{
+                  fontSize: "0.6rem",
+                  fontWeight: 700,
+                  color:
+                    systemStatus.attitude === "NOMINAL" ? "#68d391" : "#fc8181",
+                }}
+              >
+                {systemStatus.attitude}
+              </span>
+            </div>
           </div>
 
           {/* Target profile */}
@@ -939,6 +1346,11 @@ export default function AMDS() {
                 val: `${(selectedAsteroid.dist_km / 1e6).toFixed(0)}M km`,
               },
               { label: "Est. Mass", val: selectedAsteroid.mass_est },
+              {
+                label: "Comm Delay",
+                val: `${commDelay} min`,
+                color: commDelay > 10 ? "#fc8181" : "#8892a4",
+              },
               {
                 label: "Time to Fill",
                 val:
