@@ -126,6 +126,7 @@ export default function AMDS() {
 
   const [wasmReady, setWasmReady] = useState(false);
   const [selectedAsteroid, setSelectedAsteroid] = useState(ASTEROIDS[1]);
+  const [visitedIds, setVisitedIds] = useState([ASTEROIDS[1].id]);
   const [shipConfig, setShipConfig] = useState({
     fuel_kg: 800,
     ship_mass_kg: 2400,
@@ -133,7 +134,7 @@ export default function AMDS() {
   });
   const [missionActive, setMissionActive] = useState(false);
   const [missionPhase, setMissionPhase] = useState("STANDBY");
-  const [manualMode, setManualMode] = useState(false);
+  const [manualMode, setManualMode] = useState(true);
   const [manualStep, setManualStep] = useState(0); // index into MANUAL_STEPS
   const [manualPhase, setManualPhase] = useState("STANDBY");
   const [awaitingConfirm, setAwaitingConfirm] = useState(false);
@@ -177,7 +178,12 @@ export default function AMDS() {
           ast.name.toLowerCase().includes(a.name?.toLowerCase?.() ?? "") ||
           (a.name?.toLowerCase?.() ?? "").includes(ast.name.toLowerCase()),
       );
-      if (match) setSelectedAsteroid(match);
+      if (match) {
+        setSelectedAsteroid(match);
+        setVisitedIds((prev) =>
+          prev.includes(match.id) ? prev : [...prev, match.id],
+        );
+      }
     }
   }, [location.state]);
 
@@ -900,13 +906,20 @@ export default function AMDS() {
         {/* LEFT SIDEBAR */}
         <div className="amds-sidebar">
           {/* Target selection */}
-          <div className="amds-section">
+          <div className="amds-section" style={{ paddingBottom: "0.5rem" }}>
             <span className="amds-section-label">Target Asteroid</span>
-            {ASTEROIDS.map((a) => (
+            {ASTEROIDS.filter((a) => visitedIds.includes(a.id)).map((a) => (
               <div
                 key={a.id}
                 className="amds-target-item"
-                onClick={() => !missionActive && setSelectedAsteroid(a)}
+                onClick={() => {
+                  if (!missionActive) {
+                    setSelectedAsteroid(a);
+                    setVisitedIds((prev) =>
+                      prev.includes(a.id) ? prev : [...prev, a.id],
+                    );
+                  }
+                }}
                 style={{
                   cursor: missionActive ? "not-allowed" : "pointer",
                   background:
@@ -935,7 +948,7 @@ export default function AMDS() {
           </div>
 
           {/* Ship config */}
-          <div className="amds-section">
+          <div className="amds-section" style={{ paddingBottom: "0.5rem" }}>
             <span className="amds-section-label">Ship Configuration</span>
             {[
               {
@@ -991,7 +1004,7 @@ export default function AMDS() {
           </div>
 
           {/* DV analysis */}
-          <div className="amds-section">
+          <div className="amds-section" style={{ paddingBottom: "0.5rem" }}>
             <span className="amds-section-label">
               ΔV Analysis <span className="amds-rust-note">(Rust)</span>
             </span>

@@ -142,7 +142,7 @@
   letter-spacing: 0.2em;
   text-transform: uppercase;
   color: rgba(104, 211, 145, 0.55);
-  margin-bottom: 0.6rem;
+  margin-bottom: 0.4rem;
 }
 
 .amds-rust-note {
@@ -183,7 +183,7 @@
 
 /* Sliders */
 .amds-slider-row {
-  margin-bottom: 0.9rem;
+  margin-bottom: 0.35rem;
 }
 
 .amds-slider-header {
