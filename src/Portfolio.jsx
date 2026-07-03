@@ -273,9 +273,44 @@ export default function Portfolio() {
               </div>
             </div>
 
+            {/* BizWatch Connect */}
+            <div className="project-card reveal">
+              <div className="project-number">03</div>
+              <div className="project-tag">
+                React · React Native / Expo · Firebase
+              </div>
+              <h3 className="project-title">BizWatch Connect</h3>
+              <p className="project-desc">
+                A business-focused alert and messaging platform connecting
+                local businesses for real-time communication, safety alerts,
+                and deals — built as a web app with a companion React Native
+                mobile app. Features Discord-style group channels, direct
+                messaging, and an interactive map for discovering nearby
+                businesses on the network.
+              </p>
+              <div className="project-links">
+                <a
+                  href="https://bizwatch.app/"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="project-link project-link--primary"
+                >
+                  Launch App →
+                </a>
+                <a
+                  href="https://github.com/JacobBarnett"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="project-link"
+                >
+                  GitHub →
+                </a>
+              </div>
+            </div>
+
             {/* AstroForge — Asteroid Mining Dashboard */}
             <div className="project-card project-card--featured reveal">
-              <div className="project-number">03</div>
+              <div className="project-number">04</div>
               <div className="project-featured-badge">Featured</div>
               <div className="project-tag">
                 React · Three.js · Rust · NASA API
