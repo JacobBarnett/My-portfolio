@@ -11,6 +11,9 @@
 # production
 /build
 
+# rust build cache
+mining-physics/target
+
 # misc
 .DS_Store
 .env.local
