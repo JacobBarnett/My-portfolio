@@ -342,6 +342,33 @@ export default function Portfolio() {
                 </a>
               </div>
             </div>
+
+            {/* Debt Settlement Tracker */}
+            <div className="project-card reveal">
+              <div className="project-number">05</div>
+              <div className="project-tag">
+                React · TypeScript · PHP / Laravel · Go · MySQL
+              </div>
+              <h3 className="project-title">Debt Settlement Tracker</h3>
+              <p className="project-desc">
+                An internal tool for tracking clients through a debt settlement
+                program — enrollment, settlement progress, and a projected
+                payoff timeline. Deliberately split into three services: a React
+                and TypeScript dashboard, a PHP/Laravel CRUD API backed by
+                MySQL, and a Go microservice that calculates the payoff
+                schedule. Runs locally; setup instructions are in the README.
+              </p>
+              <div className="project-links">
+                <a
+                  href="https://github.com/JacobBarnett/debt-settlement-tracker"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="project-link project-link--primary"
+                >
+                  View Code →
+                </a>
+              </div>
+            </div>
           </div>
         </div>
       </section>
