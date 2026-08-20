@@ -1,4 +1,4 @@
-package handler
+package payoffapi
 
 import (
 	"encoding/json"
@@ -10,10 +10,10 @@ import (
 	"github.com/JacobBarnett/My-portfolio/internal/payoff"
 )
 
-func TestHandlerReturnsProjection(t *testing.T) {
+func TestHandleReturnsProjection(t *testing.T) {
 	body := `{"enrolled_debt":12000,"settled_amount":2000,"monthly_payment":500}`
 	rec := httptest.NewRecorder()
-	Handler(rec, httptest.NewRequest(http.MethodPost, "/api/project-payoff", strings.NewReader(body)))
+	Handle(rec, httptest.NewRequest(http.MethodPost, "/api/project-payoff", strings.NewReader(body)))
 
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want %d (body: %s)", rec.Code, http.StatusOK, rec.Body)
@@ -31,19 +31,19 @@ func TestHandlerReturnsProjection(t *testing.T) {
 	}
 }
 
-func TestHandlerRejectsInvalidPlan(t *testing.T) {
+func TestHandleRejectsInvalidPlan(t *testing.T) {
 	body := `{"enrolled_debt":0,"settled_amount":0,"monthly_payment":500}`
 	rec := httptest.NewRecorder()
-	Handler(rec, httptest.NewRequest(http.MethodPost, "/api/project-payoff", strings.NewReader(body)))
+	Handle(rec, httptest.NewRequest(http.MethodPost, "/api/project-payoff", strings.NewReader(body)))
 
 	if rec.Code != http.StatusUnprocessableEntity {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusUnprocessableEntity)
 	}
 }
 
-func TestHandlerAnswersPreflight(t *testing.T) {
+func TestHandleAnswersPreflight(t *testing.T) {
 	rec := httptest.NewRecorder()
-	Handler(rec, httptest.NewRequest(http.MethodOptions, "/api/project-payoff", nil))
+	Handle(rec, httptest.NewRequest(http.MethodOptions, "/api/project-payoff", nil))
 
 	if rec.Code != http.StatusNoContent {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusNoContent)
@@ -53,9 +53,9 @@ func TestHandlerAnswersPreflight(t *testing.T) {
 	}
 }
 
-func TestHandlerRejectsGet(t *testing.T) {
+func TestHandleRejectsGet(t *testing.T) {
 	rec := httptest.NewRecorder()
-	Handler(rec, httptest.NewRequest(http.MethodGet, "/api/project-payoff", nil))
+	Handle(rec, httptest.NewRequest(http.MethodGet, "/api/project-payoff", nil))
 
 	if rec.Code != http.StatusMethodNotAllowed {
 		t.Fatalf("status = %d, want %d", rec.Code, http.StatusMethodNotAllowed)
