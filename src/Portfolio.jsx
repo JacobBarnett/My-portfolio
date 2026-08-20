@@ -356,16 +356,25 @@ export default function Portfolio() {
                 payoff timeline. Deliberately split into three services: a React
                 and TypeScript dashboard, a PHP/Laravel CRUD API backed by
                 MySQL, and a Go microservice that calculates the payoff
-                schedule. Runs locally; setup instructions are in the README.
+                schedule. The live demo runs the real Go projection service as a
+                serverless function, with sample client data in the browser.
               </p>
               <div className="project-links">
                 <a
-                  href="https://github.com/JacobBarnett/debt-settlement-tracker"
+                  href="/debt-tracker/"
                   target="_blank"
                   rel="noreferrer"
                   className="project-link project-link--primary"
                 >
-                  View Code →
+                  Launch Demo →
+                </a>
+                <a
+                  href="https://github.com/JacobBarnett/debt-settlement-tracker"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="project-link"
+                >
+                  GitHub →
                 </a>
               </div>
             </div>
