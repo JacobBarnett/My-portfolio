@@ -1,0 +1,68 @@
+{
+ "note": "Every constant the engine uses that is not measured. Returned by the get_assumptions tool so that even an assumption has a traceable source. The UI labels these as assumptions, not measurements.",
+ "commodity_prices_usd_per_ton": {
+  "water_in_orbit": {
+   "value": 2700000,
+   "source": "Avoided launch cost. SpaceX published Falcon 9 price of about 2700 USD per kg to low Earth orbit, so a ton of water already in orbit displaces that much launch mass.",
+   "confidence": "defensible but policy dependent"
+  },
+  "iron": {
+   "value": 120,
+   "source": "Terrestrial iron ore price, 2026 range",
+   "confidence": "high"
+  },
+  "nickel": {
+   "value": 16000,
+   "source": "London Metal Exchange nickel, 2026 range",
+   "confidence": "high"
+  },
+  "cobalt": {
+   "value": 33000,
+   "source": "London Metal Exchange cobalt, 2026 range",
+   "confidence": "high"
+  },
+  "platinum_group_metals": {
+   "value": 32000000,
+   "source": "Platinum at roughly 1000 USD per troy ounce",
+   "confidence": "high"
+  }
+ },
+ "cost_model": {
+  "propellant_usd_per_ton": {
+   "value": 5000,
+   "source": "Industrial argon, the propellant Starlink thrusters use, at roughly 5 USD per kg",
+   "confidence": "high"
+  },
+  "operations_usd_per_day": {
+   "value": 100000,
+   "source": "Order of magnitude for a small mission operations team, ground network time included",
+   "confidence": "low, an estimate"
+  }
+ },
+ "mission_model": {
+  "delta_v_split": {
+   "value": 0.5,
+   "description": "NHATS publishes one total round trip delta v. The engine splits it evenly between the outbound leg and the return leg.",
+   "confidence": "simplification, a real mission would not split evenly"
+  },
+  "included_stay_days": {
+   "value": 8,
+   "description": "The NHATS query that built the dataset required a stay of at least 8 days, so that much surface time is already inside round_trip_days. Mining beyond 8 days extends the mission.",
+   "confidence": "follows from the data source"
+  },
+  "ore_density_t_per_m3": {
+   "value": 2.0,
+   "source": "Typical rubble pile bulk density, used only to check that a tonnage target is small next to the object",
+   "confidence": "medium"
+  }
+ },
+ "composition_model": {
+  "description": "Mass fractions by spectral class, with platinum group metals in parts per million. Each asteroid record carries a composition_source field saying whether its class came from published taxonomy, from an albedo inference, or from nothing at all.",
+  "sources": {
+   "metallic_M": "Iron meteorite bulk composition, roughly 89 percent iron and 8 percent nickel, platinum group metals at tens of ppm",
+   "carbonaceous_C_and_B": "CI and CM chondrite water content, 8 to 12 percent by mass as hydrated minerals",
+   "stony_S": "Ordinary chondrite composition, metal in the low tens of percent and essentially no water"
+  },
+  "confidence": "class assignment is often an inference, the fractions inside a class are literature averages"
+ }
+}

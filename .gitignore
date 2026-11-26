@@ -24,3 +24,10 @@ mining-physics/target
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# rust wasm-pack output
+mining-physics/pkg
+mining-physics/pkg-node
+
+# secrets
+.env

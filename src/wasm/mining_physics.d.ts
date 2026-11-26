@@ -39,10 +39,23 @@ export class MissionState {
     thrust_n: number;
 }
 
+/**
+ * Call any tool by name. Input and output are JSON strings, so adding a tool
+ * never changes this binding.
+ */
+export function call_tool(name: string, input_json: string): string;
+
+/**
+ * The tool names this build supports, as a JSON array.
+ */
+export function tool_names(): string;
+
 export type InitInput = RequestInfo | URL | Response | BufferSource | WebAssembly.Module;
 
 export interface InitOutput {
     readonly memory: WebAssembly.Memory;
+    readonly call_tool: (a: number, b: number, c: number, d: number) => [number, number];
+    readonly tool_names: () => [number, number];
     readonly __wbg_get_missionstate_distance_km: (a: number) => number;
     readonly __wbg_get_missionstate_exhaust_velocity: (a: number) => number;
     readonly __wbg_get_missionstate_extraction_rate: (a: number) => number;
@@ -68,6 +81,9 @@ export interface InitOutput {
     readonly missionstate_time_to_capacity: (a: number, b: number) => number;
     readonly missionstate_transfer_delta_v: (a: number) => number;
     readonly __wbindgen_externrefs: WebAssembly.Table;
+    readonly __wbindgen_malloc: (a: number, b: number) => number;
+    readonly __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
+    readonly __wbindgen_free: (a: number, b: number, c: number) => void;
     readonly __wbindgen_start: () => void;
 }
 

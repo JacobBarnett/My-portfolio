@@ -515,3 +515,431 @@
   background: rgba(104, 211, 145, 0.15);
   border-radius: 2px;
 }
+
+
+/* ══ SHIP PICKER ══
+   Four real spacecraft and three invented haulers. The tier badge and the
+   source list exist so nobody has to guess which is which. */
+
+.amds-ships {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.amds-ship-loading,
+.amds-ship-error {
+  font-size: 0.7rem;
+  color: rgba(232, 237, 245, 0.45);
+  padding: 0.4rem 0;
+}
+.amds-ship-error {
+  color: #fc8181;
+}
+
+.amds-ship-group-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.55rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(232, 237, 245, 0.35);
+  margin: 0.4rem 0 0.25rem;
+}
+
+.amds-tier {
+  font-size: 0.5rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.08rem 0.3rem;
+  border-radius: 2px;
+}
+.amds-tier-flown {
+  color: #68d391;
+  background: rgba(104, 211, 145, 0.12);
+}
+.amds-tier-in_development {
+  color: #63b3ed;
+  background: rgba(99, 179, 237, 0.12);
+}
+.amds-tier-speculative {
+  color: #c8a96e;
+  background: rgba(200, 169, 110, 0.14);
+}
+
+.amds-ship {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  width: 100%;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(104, 211, 145, 0.06);
+  border-radius: 3px;
+  padding: 0.4rem 0.5rem;
+  cursor: pointer;
+  font-family: "DM Sans", sans-serif;
+  transition: all 0.15s;
+}
+.amds-ship:hover:not(:disabled) {
+  border-color: rgba(104, 211, 145, 0.25);
+}
+.amds-ship-on {
+  background: rgba(104, 211, 145, 0.1);
+  border-color: rgba(104, 211, 145, 0.35);
+}
+.amds-ship:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.amds-ship-name {
+  font-size: 0.74rem;
+  color: #e8edf5;
+}
+.amds-ship-meta {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.4rem;
+  font-size: 0.6rem;
+  color: rgba(232, 237, 245, 0.4);
+}
+.amds-ship-dv {
+  color: rgba(104, 211, 145, 0.7);
+  font-variant-numeric: tabular-nums;
+}
+.amds-ship-unknown {
+  color: rgba(99, 179, 237, 0.7);
+}
+
+/* the selected ship */
+
+.amds-ship-detail {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(104, 211, 145, 0.12);
+}
+
+.amds-ship-detail-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.3rem;
+}
+.amds-ship-detail-name {
+  font-family: "DM Serif Display", serif;
+  font-size: 0.95rem;
+  color: #e8edf5;
+}
+
+.amds-ship-status,
+.amds-ship-notes,
+.amds-ship-basis,
+.amds-ship-warn,
+.amds-ship-footnote {
+  font-size: 0.66rem;
+  line-height: 1.5;
+  margin: 0.35rem 0;
+}
+.amds-ship-status {
+  color: rgba(232, 237, 245, 0.55);
+}
+.amds-ship-notes {
+  color: rgba(232, 237, 245, 0.72);
+}
+.amds-ship-basis {
+  color: rgba(200, 169, 110, 0.85);
+  border-left: 2px solid rgba(200, 169, 110, 0.4);
+  padding-left: 0.5rem;
+}
+.amds-ship-warn {
+  color: #f6ad55;
+  border-left: 2px solid rgba(246, 173, 85, 0.45);
+  padding-left: 0.5rem;
+}
+.amds-ship-footnote {
+  color: rgba(232, 237, 245, 0.3);
+  font-size: 0.6rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding-top: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+.amds-spec-table {
+  margin: 0.4rem 0;
+}
+.amds-spec-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.16rem 0;
+  font-size: 0.66rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+}
+.amds-spec-key {
+  color: rgba(232, 237, 245, 0.45);
+}
+.amds-spec-val {
+  color: #e8edf5;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+.amds-spec-unknown {
+  color: rgba(99, 179, 237, 0.65);
+  font-style: italic;
+}
+
+.amds-ship-sources-toggle {
+  background: none;
+  border: none;
+  padding: 0;
+  margin-top: 0.3rem;
+  color: rgba(104, 211, 145, 0.6);
+  font-family: "DM Sans", sans-serif;
+  font-size: 0.58rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.amds-ship-sources-toggle:hover {
+  color: #68d391;
+}
+
+.amds-ship-sources {
+  margin-top: 0.4rem;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 3px;
+  padding: 0.4rem 0.5rem;
+}
+.amds-ship-source-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  font-size: 0.58rem;
+  line-height: 1.45;
+  padding: 0.12rem 0;
+}
+.amds-ship-source-row span:first-child {
+  color: rgba(232, 237, 245, 0.4);
+  white-space: nowrap;
+}
+.amds-ship-source-row span:last-child {
+  color: rgba(232, 237, 245, 0.7);
+  text-align: right;
+}
+.amds-ship-invented {
+  color: rgba(200, 169, 110, 0.9) !important;
+}
+.amds-ship-uncertainty {
+  font-size: 0.58rem;
+  line-height: 1.5;
+  color: rgba(232, 237, 245, 0.5);
+  margin: 0.4rem 0 0;
+  padding-top: 0.35rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+.amds-ship-uncertainty strong {
+  color: rgba(232, 237, 245, 0.7);
+}
+
+
+/* ══ TARGET LIST, HAUL, COMMANDS, TIMELINE ══
+   Added when the simulator moved onto the real catalogue: 50 objects with real
+   delta v, seven ships, and a mission timeline that comes from the engine. */
+
+.amds-filters {
+  display: flex;
+  gap: 3px;
+  margin-bottom: 0.4rem;
+}
+.amds-filter {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(104, 211, 145, 0.08);
+  color: rgba(232, 237, 245, 0.5);
+  border-radius: 3px;
+  padding: 0.22rem 0.1rem;
+  font-family: "DM Sans", sans-serif;
+  font-size: 0.56rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.amds-filter:hover {
+  color: #68d391;
+}
+.amds-filter-on {
+  background: rgba(104, 211, 145, 0.14);
+  border-color: rgba(104, 211, 145, 0.35);
+  color: #68d391;
+}
+
+.amds-target-list {
+  max-height: 14rem;
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.amds-src-tag {
+  margin-left: 0.35rem;
+  font-size: 0.5rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(232, 237, 245, 0.35);
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 2px;
+  padding: 0.04rem 0.22rem;
+}
+
+.amds-slider-ends {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.55rem;
+  color: rgba(232, 237, 245, 0.3);
+  margin-top: 0.15rem;
+}
+
+/* feasibility, straight from the engine */
+
+.amds-feas {
+  margin-top: 0.5rem;
+}
+.amds-feas-head {
+  font-size: 0.62rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.3rem 0.4rem;
+  border-radius: 3px;
+  margin-bottom: 0.3rem;
+}
+.amds-feas-head.ok {
+  color: #68d391;
+  background: rgba(104, 211, 145, 0.1);
+  border: 1px solid rgba(104, 211, 145, 0.3);
+}
+.amds-feas-head.bad {
+  color: #fc8181;
+  background: rgba(252, 129, 129, 0.08);
+  border: 1px solid rgba(252, 129, 129, 0.3);
+}
+.amds-feas-fail {
+  color: #fc8181 !important;
+}
+
+/* mode toggle and commands */
+
+.amds-mode-btn {
+  flex: 1;
+  padding: 0.35rem;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 0.65rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  font-family: "DM Sans", sans-serif;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(104, 211, 145, 0.1);
+  color: #8892a4;
+}
+.amds-mode-on {
+  background: rgba(104, 211, 145, 0.15);
+  border-color: rgba(104, 211, 145, 0.4);
+  color: #68d391;
+}
+
+.amds-next-label {
+  font-size: 0.6rem;
+  color: rgba(104, 211, 145, 0.5);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.amds-next-desc {
+  font-size: 0.7rem;
+  color: #e8edf5;
+  margin-bottom: 6px;
+}
+
+.amds-btn-command {
+  width: 100%;
+  background: rgba(104, 211, 145, 0.15);
+  border: 1px solid rgba(104, 211, 145, 0.45);
+  color: #68d391;
+  font-weight: 700;
+}
+.amds-btn-abort {
+  background: rgba(252, 129, 129, 0.1);
+  border: 1px solid rgba(252, 129, 129, 0.35);
+  color: #fc8181;
+}
+
+.amds-executing {
+  font-size: 0.7rem;
+  color: #c8a96e;
+  text-align: center;
+  padding: 0.5rem;
+}
+
+.amds-auto-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+.amds-speeds {
+  display: flex;
+  gap: 3px;
+}
+.amds-speed {
+  flex: 1;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(104, 211, 145, 0.1);
+  color: rgba(232, 237, 245, 0.55);
+  border-radius: 3px;
+  padding: 0.3rem;
+  font-family: "DM Sans", sans-serif;
+  font-size: 0.6rem;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+}
+.amds-speed-on {
+  background: rgba(104, 211, 145, 0.14);
+  border-color: rgba(104, 211, 145, 0.4);
+  color: #68d391;
+}
+
+/* the timeline over the viewport */
+
+.amds-strip-overlay {
+  position: absolute;
+  left: 1rem;
+  right: 1rem;
+  bottom: 3.2rem;
+  background: rgba(3, 6, 8, 0.78);
+  border: 1px solid rgba(104, 211, 145, 0.14);
+  border-radius: 4px;
+  padding: 0.5rem 0.6rem;
+  backdrop-filter: blur(4px);
+}
+.amds-strip {
+  display: flex;
+  gap: 2px;
+  height: 6px;
+  margin-bottom: 0.35rem;
+}
+.amds-strip-seg {
+  border-radius: 1px;
+  min-width: 2px;
+  transition: background 0.3s;
+}
+.amds-strip-on {
+  filter: brightness(1.3);
+  box-shadow: 0 0 8px currentColor;
+}
+.amds-strip-note {
+  font-size: 0.62rem;
+  color: rgba(232, 237, 245, 0.55);
+  margin-top: 0.2rem;
+}

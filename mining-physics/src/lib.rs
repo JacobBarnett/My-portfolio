@@ -1,5 +1,10 @@
 use wasm_bindgen::prelude::*;
 
+pub mod tools;
+mod wasm_api;
+
+pub use wasm_api::{call_tool, tool_names};
+
 #[wasm_bindgen]
 pub struct MissionState {
     pub fuel_kg: f64,

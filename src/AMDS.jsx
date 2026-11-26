@@ -1,110 +1,39 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 import { useLocation, useNavigate } from "react-router-dom";
+
+import { ask } from "./engine/call.mjs";
+import { buildShip, setThrust, disposeShip } from "./engine/shipModels";
+import { PHASE_SEQUENCE } from "./flight/phases.mjs";
+import { stateAt, totalDays, isPlayable, phaseLogLine } from "./flight/playback.mjs";
+import ShipPicker from "./components/ShipPicker";
 import "./AMDS.css";
 
-// ── Load Rust WASM module ──
-let wasmModule = null;
-async function loadWasm() {
-  if (wasmModule) return wasmModule;
-  try {
-    const mod = await import(
-      /* webpackIgnore: true */ "/static-wasm/mining_physics.js"
-    );
-    await mod.default("/static-wasm/mining_physics_bg.wasm");
-    wasmModule = mod;
-    return mod;
-  } catch (e) {
-    console.error("WASM load failed:", e);
-    return null;
-  }
-}
+// Phase colours are shared with the playback module so the badge, the strip and
+// the log cannot disagree about what ANCHORING looks like.
+const PHASE_COLORS = PHASE_SEQUENCE;
 
-const ASTEROIDS = [
-  {
-    id: 1,
-    name: "433 Eros",
-    dist_km: 218000000,
-    type: "S",
-    pgm: 38,
-    mass_est: "6.69 × 10¹⁵ kg",
-  },
-  {
-    id: 2,
-    name: "16 Psyche",
-    dist_km: 370000000,
-    type: "M",
-    pgm: 92,
-    mass_est: "2.41 × 10¹⁹ kg",
-  },
-  {
-    id: 3,
-    name: "1986 DA",
-    dist_km: 280000000,
-    type: "M",
-    pgm: 88,
-    mass_est: "~1 × 10¹³ kg",
-  },
-  {
-    id: 4,
-    name: "2011 UW158",
-    dist_km: 64000000,
-    type: "X",
-    pgm: 75,
-    mass_est: "~5 × 10¹⁰ kg",
-  },
-  {
-    id: 5,
-    name: "Bennu",
-    dist_km: 168000000,
-    type: "C",
-    pgm: 18,
-    mass_est: "7.33 × 10¹⁰ kg",
-  },
+/** The manual commands, in order. One per phase that takes time. */
+const MANUAL_STEPS = [
+  { phase: "TRANSIT", label: "Execute transfer burn", desc: "Fire for the target" },
+  { phase: "APPROACH", label: "Begin approach", desc: "Match rotation and close in" },
+  { phase: "ANCHORING", label: "Deploy anchors", desc: "Harpoon into the surface" },
+  { phase: "DRILLING", label: "Begin drilling", desc: "Spin up the drill head" },
+  { phase: "EXTRACTING", label: "Transfer ore to the hold", desc: "Move rock into storage" },
+  { phase: "RETURNING", label: "Execute return burn", desc: "Release anchors and fire for home" },
 ];
 
-const pgmColor = (s) => (s >= 70 ? "#63b3ed" : s >= 40 ? "#c8a96e" : "#8892a4");
+const DEFAULT_SHIP = "ion-freighter";
 
-const PHASE_COLORS = {
-  STANDBY: "#8892a4",
-  TRANSIT: "#c8a96e",
-  APPROACH: "#f6ad55",
-  ANCHORING: "#fc8181",
-  DRILLING: "#68d391",
-  EXTRACTING: "#63b3ed",
-  RETURNING: "#fc8181",
-  COMPLETE: "#63b3ed",
-};
+/** Six seconds per command, whatever the phase really takes. */
+const MANUAL_SECONDS_PER_PHASE = 6;
 
-// Manual mode steps in order
-const MANUAL_STEPS = [
-  {
-    key: "TRANSIT",
-    label: "▶ Execute Transfer Burn",
-    desc: "Fire thrusters toward target",
-  },
-  {
-    key: "APPROACH",
-    label: "⊕ Begin Approach",
-    desc: "Match asteroid rotation, slow down",
-  },
-  {
-    key: "ANCHORING",
-    label: "⚓ Deploy Anchors",
-    desc: "Harpoon into surface — zero-G lock",
-  },
-  { key: "DRILLING", label: "⛏ Begin Drilling", desc: "Activate drill head" },
-  {
-    key: "EXTRACTING",
-    label: "◉ Transfer Ore to Hold",
-    desc: "Move extracted material to storage",
-  },
-  {
-    key: "RETURNING",
-    label: "← Execute Return Burn",
-    desc: "Release anchors, fire for home",
-  },
+const FILTERS = [
+  { id: "all", label: "All" },
+  { id: "reachable", label: "Reachable" },
+  { id: "water", label: "Water" },
+  { id: "metal", label: "Metal" },
 ];
 
 export default function AMDS() {
@@ -116,148 +45,144 @@ export default function AMDS() {
   const controlsRef = useRef(null);
   const shipRef = useRef(null);
   const particlesRef = useRef(null);
-  const missionStateRef = useRef(null);
-  const wasmRef = useRef(null);
-  const tickRef = useRef(null);
   const asteroidMeshRef = useRef(null);
+  const phaseRef = useRef(null);
 
   const location = useLocation();
   const navigate = useNavigate();
 
-  const [wasmReady, setWasmReady] = useState(false);
-  const [selectedAsteroid, setSelectedAsteroid] = useState(ASTEROIDS[1]);
-  const [visitedIds, setVisitedIds] = useState([ASTEROIDS[1].id]);
-  const [shipConfig, setShipConfig] = useState({
-    fuel_kg: 800,
-    ship_mass_kg: 2400,
-    ore_capacity: 1000,
-  });
-  const [missionActive, setMissionActive] = useState(false);
-  const [missionPhase, setMissionPhase] = useState("STANDBY");
+  // ── What the engine told us ──
+  const [fleet, setFleet] = useState(null);
+  const [rocks, setRocks] = useState(null);
+  const [engineError, setEngineError] = useState(null);
+
+  // ── What the operator picked ──
+  const [shipId, setShipId] = useState(DEFAULT_SHIP);
+  const [asteroidId, setAsteroidId] = useState(null);
+  const [tonnage, setTonnage] = useState(500);
+  const [filter, setFilter] = useState("all");
+
+  // ── The mission ──
+  const [check, setCheck] = useState(null);
+  const [envelope, setEnvelope] = useState(null);
+  const [sim, setSim] = useState(null);
+  const [day, setDay] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  const [speed, setSpeed] = useState(10);
   const [manualMode, setManualMode] = useState(true);
-  const [manualStep, setManualStep] = useState(0); // index into MANUAL_STEPS
-  const [manualPhase, setManualPhase] = useState("STANDBY");
-  const [awaitingConfirm, setAwaitingConfirm] = useState(false);
-  const [commDelay, setCommDelay] = useState(0); // simulated signal delay in seconds
-  const [systemStatus, setSystemStatus] = useState({
-    power: 98,
-    thermal: 72,
-    attitude: "NOMINAL",
-    signal: 100,
-  });
-  const [telemetry, setTelemetry] = useState({
-    fuel_kg: 800,
-    ore_kg: 0,
-    delta_v: 0,
-    transfer_dv: 0,
-    mission_score: 0,
-    time_to_capacity: 0,
-    mission_time_s: 0,
-    extraction_rate: 0.8,
-  });
-  const [log, setLog] = useState([
-    { t: "00:00", msg: "System nominal. Awaiting launch." },
-  ]);
+  const [manualStep, setManualStep] = useState(0);
+  const [manualTarget, setManualTarget] = useState(null);
+  const [log, setLog] = useState([{ t: "00:00", msg: "Awaiting a target and a ship." }]);
 
   const addLog = useCallback((msg) => {
     setLog((prev) => {
-      const mins = Math.floor((prev.length * 3) / 60)
-        .toString()
-        .padStart(2, "0");
+      const mins = Math.floor((prev.length * 3) / 60).toString().padStart(2, "0");
       const secs = ((prev.length * 3) % 60).toString().padStart(2, "0");
-      return [...prev.slice(-12), { t: `${mins}:${secs}`, msg }];
+      return [...prev.slice(-14), { t: `${mins}:${secs}`, msg }];
     });
   }, []);
 
-  // ── Pre-select asteroid from AMD navigation ──
-  useEffect(() => {
-    if (location.state?.asteroid) {
-      const a = location.state.asteroid;
-      const match = ASTEROIDS.find(
-        (ast) =>
-          ast.name.toLowerCase().includes(a.name?.toLowerCase?.() ?? "") ||
-          (a.name?.toLowerCase?.() ?? "").includes(ast.name.toLowerCase()),
-      );
-      if (match) {
-        setSelectedAsteroid(match);
-        setVisitedIds((prev) =>
-          prev.includes(match.id) ? prev : [...prev, match.id],
-        );
-      }
-    }
-  }, [location.state]);
+  // ── Derived ──
+  const ship = useMemo(() => fleet?.ships?.find((s) => s.id === shipId) ?? null, [fleet, shipId]);
+  const asteroid = useMemo(
+    () => rocks?.find((r) => r.id === asteroidId) ?? null,
+    [rocks, asteroidId],
+  );
+  const frames = useMemo(() => (isPlayable(sim?.timeline) ? sim.timeline : null), [sim]);
+  const total = useMemo(() => (frames ? totalDays(frames) : 0), [frames]);
+  const mission = useMemo(() => (frames ? stateAt(frames, day) : null), [frames, day]);
 
-  // ── Update comm delay based on selected asteroid ──
-  useEffect(() => {
-    const delay = Math.round(selectedAsteroid.dist_km / 300000 / 60); // light-minutes
-    setCommDelay(delay);
-  }, [selectedAsteroid]);
+  const hold = ship?.cargo_capacity_tons ?? null;
+  const specsKnown = ship ? ship.exhaust_velocity_m_s != null : false;
+  const canFly = Boolean(check?.feasible) && specsKnown;
+  const flying = Boolean(frames);
+  const done = Boolean(mission?.done);
 
-  // ── Load WASM ──
+  // ── Load the catalogues once ──
   useEffect(() => {
-    loadWasm().then((mod) => {
-      if (mod) {
-        wasmRef.current = mod;
-        setWasmReady(true);
+    let live = true;
+    (async () => {
+      const [ships, search] = await Promise.all([
+        ask("list_ships"),
+        ask("search_asteroids", { limit: 50 }),
+      ]);
+      if (!live) return;
+      if (ships.error || search.error) {
+        setEngineError(ships.hint ?? search.hint ?? "The physics engine did not load.");
+        return;
       }
-    });
+      setFleet(ships);
+      const list = (search.asteroids ?? []).slice().sort((a, b) => a.delta_v_km_s - b.delta_v_km_s);
+      setRocks(list);
+      setAsteroidId((cur) => cur ?? list[0]?.id ?? null);
+    })();
+    return () => {
+      live = false;
+    };
   }, []);
 
-  // ── Init WASM state ──
+  // ── A target handed over from the asteroid browser at /asteroids ──
   useEffect(() => {
-    if (!wasmReady || !wasmRef.current) return;
-    try {
-      missionStateRef.current?.free?.();
-      const state = new wasmRef.current.MissionState(
-        shipConfig.fuel_kg,
-        shipConfig.ship_mass_kg,
-        selectedAsteroid.dist_km,
-      );
-      missionStateRef.current = state;
-      setTelemetry((p) => ({
-        ...p,
-        fuel_kg: shipConfig.fuel_kg,
-        ore_kg: 0,
-        delta_v: state.delta_v(),
-        transfer_dv: state.transfer_delta_v(),
-        mission_score: 0,
-        time_to_capacity: state.time_to_capacity(shipConfig.ore_capacity),
-        mission_time_s: 0,
-      }));
-    } catch (e) {
-      console.error("WASM init error:", e);
+    const wanted = location.state?.asteroid?.name;
+    if (!wanted || !rocks) return;
+    const needle = wanted.toLowerCase();
+    const hit = rocks.find(
+      (r) =>
+        r.name?.toLowerCase().includes(needle) ||
+        needle.includes((r.des ?? "").toLowerCase()) ||
+        needle.includes((r.name ?? "").toLowerCase()),
+    );
+    if (hit) {
+      setAsteroidId(hit.id);
+      addLog(`Target ${hit.name} carried over from the browser.`);
     }
-  }, [wasmReady, shipConfig, selectedAsteroid]);
+  }, [location.state, rocks, addLog]);
 
-  // ── Simulate system status fluctuations ──
+  // ── Keep the haul inside the hold ──
   useEffect(() => {
-    if (!missionActive) return;
-    const interval = setInterval(() => {
-      setSystemStatus((prev) => ({
-        power: Math.max(
-          20,
-          Math.min(100, prev.power + (Math.random() - 0.52) * 2),
-        ),
-        thermal: Math.max(
-          40,
-          Math.min(110, prev.thermal + (Math.random() - 0.48) * 3),
-        ),
-        attitude: prev.thermal > 95 ? "WARNING" : "NOMINAL",
-        signal: Math.max(
-          30,
-          Math.min(100, prev.signal + (Math.random() - 0.5) * 4),
-        ),
-      }));
-    }, 2000);
-    return () => clearInterval(interval);
-  }, [missionActive]);
+    if (hold == null || hold <= 0) return;
+    setTonnage((t) => Math.min(Math.max(t, hold / 1000), hold));
+  }, [hold]);
 
-  // ── Three.js scene ──
+  // ── What this ship can do, and whether this mission is possible ──
+  useEffect(() => {
+    let live = true;
+    (async () => {
+      if (!ship) return;
+      const env = await ask("ship_envelope", { ship_id: ship.id });
+      if (live) setEnvelope(env.error ? null : env);
+    })();
+    return () => {
+      live = false;
+    };
+  }, [ship]);
+
+  useEffect(() => {
+    let live = true;
+    (async () => {
+      if (!ship || !asteroid) return;
+      if (!specsKnown || !hold || hold <= 0) {
+        setCheck(null);
+        return;
+      }
+      const out = await ask("check_ship", {
+        asteroid_id: asteroid.id,
+        ship_id: ship.id,
+        target_tons: tonnage,
+      });
+      if (live) setCheck(out);
+    })();
+    return () => {
+      live = false;
+    };
+  }, [ship, asteroid, tonnage, specsKnown, hold]);
+
+  // ── The scene. Built once; the ship inside it is swapped separately. ──
   useEffect(() => {
     const mount = mountRef.current;
     if (!mount) return;
-    const W = mount.clientWidth,
-      H = mount.clientHeight;
+    const W = mount.clientWidth;
+    const H = mount.clientHeight;
 
     const scene = new THREE.Scene();
     sceneRef.current = scene;
@@ -281,7 +206,6 @@ export default function AMDS() {
     controls.maxDistance = 25;
     controlsRef.current = controls;
 
-    // Stars
     const starVerts = [];
     for (let i = 0; i < 3000; i++) {
       starVerts.push(
@@ -291,19 +215,11 @@ export default function AMDS() {
       );
     }
     const starGeo = new THREE.BufferGeometry();
-    starGeo.setAttribute(
-      "position",
-      new THREE.Float32BufferAttribute(starVerts, 3),
-    );
+    starGeo.setAttribute("position", new THREE.Float32BufferAttribute(starVerts, 3));
     scene.add(
       new THREE.Points(
         starGeo,
-        new THREE.PointsMaterial({
-          color: 0xffffff,
-          size: 0.05,
-          transparent: true,
-          opacity: 0.8,
-        }),
+        new THREE.PointsMaterial({ color: 0xffffff, size: 0.05, transparent: true, opacity: 0.8 }),
       ),
     );
 
@@ -312,60 +228,25 @@ export default function AMDS() {
     scene.add(sunLight);
     scene.add(new THREE.AmbientLight(0x0a0f1a, 0.8));
 
-    // Asteroid presets
+    // The rock. Its shape is decoration: one of five lumpy presets. The
+    // numbers about it all come from the engine, never from this mesh.
     const asteroidPresets = [
-      {
-        lumpScale: [2.1, 1.8, 2.5, 2.2, 1.9, 2.4],
-        lumpAmp: [0.35, 0.28, 0.22],
-        noise: 0.06,
-        color: 0x999980,
-      },
-      {
-        lumpScale: [3.2, 2.8, 3.5, 3.1, 2.9, 3.3],
-        lumpAmp: [0.12, 0.1, 0.08],
-        noise: 0.12,
-        color: 0x888878,
-      },
-      {
-        lumpScale: [1.4, 1.2, 1.8, 1.5, 1.3, 1.6],
-        lumpAmp: [0.45, 0.38, 0.3],
-        noise: 0.05,
-        color: 0xaaa890,
-      },
-      {
-        lumpScale: [1.0, 3.5, 1.2, 3.8, 1.1, 3.6],
-        lumpAmp: [0.55, 0.15, 0.12],
-        noise: 0.07,
-        color: 0x777768,
-      },
-      {
-        lumpScale: [2.8, 2.2, 2.5, 2.9, 2.3, 2.7],
-        lumpAmp: [0.2, 0.18, 0.22],
-        noise: 0.15,
-        color: 0x666658,
-      },
+      { lumpScale: [2.1, 1.8, 2.5, 2.2, 1.9, 2.4], lumpAmp: [0.35, 0.28, 0.22], noise: 0.06, color: 0x999980 },
+      { lumpScale: [3.2, 2.8, 3.5, 3.1, 2.9, 3.3], lumpAmp: [0.12, 0.1, 0.08], noise: 0.12, color: 0x888878 },
+      { lumpScale: [1.4, 1.2, 1.8, 1.5, 1.3, 1.6], lumpAmp: [0.45, 0.38, 0.3], noise: 0.05, color: 0xaaa890 },
+      { lumpScale: [1.0, 3.5, 1.2, 3.8, 1.1, 3.6], lumpAmp: [0.55, 0.15, 0.12], noise: 0.07, color: 0x777768 },
+      { lumpScale: [2.8, 2.2, 2.5, 2.9, 2.3, 2.7], lumpAmp: [0.2, 0.18, 0.22], noise: 0.15, color: 0x666658 },
     ];
-
-    const preset =
-      asteroidPresets[Math.floor(Math.random() * asteroidPresets.length)];
+    const preset = asteroidPresets[Math.floor(Math.random() * asteroidPresets.length)];
     const astGeo = new THREE.SphereGeometry(1.4, 128, 128);
     const pos = astGeo.attributes.position;
     for (let i = 0; i < pos.count; i++) {
-      const x = pos.getX(i),
-        y = pos.getY(i),
-        z = pos.getZ(i);
-      const lump1 =
-        Math.sin(x * preset.lumpScale[0]) *
-        Math.cos(y * preset.lumpScale[1]) *
-        preset.lumpAmp[0];
-      const lump2 =
-        Math.sin(y * preset.lumpScale[2]) *
-        Math.cos(z * preset.lumpScale[3]) *
-        preset.lumpAmp[1];
-      const lump3 =
-        Math.sin(z * preset.lumpScale[4]) *
-        Math.cos(x * preset.lumpScale[5]) *
-        preset.lumpAmp[2];
+      const x = pos.getX(i);
+      const y = pos.getY(i);
+      const z = pos.getZ(i);
+      const lump1 = Math.sin(x * preset.lumpScale[0]) * Math.cos(y * preset.lumpScale[1]) * preset.lumpAmp[0];
+      const lump2 = Math.sin(y * preset.lumpScale[2]) * Math.cos(z * preset.lumpScale[3]) * preset.lumpAmp[1];
+      const lump3 = Math.sin(z * preset.lumpScale[4]) * Math.cos(x * preset.lumpScale[5]) * preset.lumpAmp[2];
       const noise = (Math.random() - 0.5) * preset.noise;
       const scale = 1 + lump1 + lump2 + lump3 + noise;
       pos.setXYZ(i, x * scale, y * scale, z * scale);
@@ -376,15 +257,11 @@ export default function AMDS() {
     const astTexture = astLoader.load(
       "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/textures/planets/moon_1024.jpg",
     );
-    const astBump = astLoader.load(
-      "https://cdn.jsdelivr.net/gh/mrdoob/three.js@r128/examples/textures/planets/moon_1024.jpg",
-    );
-
     const astMesh = new THREE.Mesh(
       astGeo,
       new THREE.MeshStandardMaterial({
         map: astTexture,
-        bumpMap: astBump,
+        bumpMap: astTexture,
         bumpScale: 1.2,
         roughness: 1.0,
         metalness: 0.05,
@@ -394,49 +271,6 @@ export default function AMDS() {
     scene.add(astMesh);
     asteroidMeshRef.current = astMesh;
 
-    // Spacecraft
-    const shipGroup = new THREE.Group();
-    shipGroup.add(
-      new THREE.Mesh(
-        new THREE.BoxGeometry(0.18, 0.1, 0.35),
-        new THREE.MeshStandardMaterial({
-          color: 0xd0d8e8,
-          metalness: 0.8,
-          roughness: 0.2,
-        }),
-      ),
-    );
-    [-1, 1].forEach((side) => {
-      const panel = new THREE.Mesh(
-        new THREE.BoxGeometry(0.55, 0.02, 0.22),
-        new THREE.MeshStandardMaterial({
-          color: 0x1a3a6a,
-          metalness: 0.3,
-          roughness: 0.4,
-          emissive: 0x0a1a3a,
-          emissiveIntensity: 0.3,
-        }),
-      );
-      panel.position.set(side * 0.37, 0, 0);
-      shipGroup.add(panel);
-    });
-    const thruster = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.04, 0.06, 0.1, 8),
-      new THREE.MeshStandardMaterial({
-        color: 0xff6600,
-        emissive: 0xff3300,
-        emissiveIntensity: 0.0,
-      }),
-    );
-    thruster.position.set(0, 0, 0.2);
-    thruster.rotation.x = Math.PI / 2;
-    shipGroup.add(thruster);
-    shipGroup.userData.thruster = thruster;
-    shipGroup.position.set(0, 0.5, 4);
-    scene.add(shipGroup);
-    shipRef.current = shipGroup;
-
-    // Mining particles
     const partVerts = new Float32Array(300);
     for (let i = 0; i < 300; i += 3) {
       partVerts[i] = (Math.random() - 0.5) * 0.5;
@@ -444,18 +278,10 @@ export default function AMDS() {
       partVerts[i + 2] = (Math.random() - 0.5) * 0.5;
     }
     const partGeo = new THREE.BufferGeometry();
-    partGeo.setAttribute(
-      "position",
-      new THREE.Float32BufferAttribute(partVerts, 3),
-    );
+    partGeo.setAttribute("position", new THREE.Float32BufferAttribute(partVerts, 3));
     const particles = new THREE.Points(
       partGeo,
-      new THREE.PointsMaterial({
-        color: 0xc8a96e,
-        size: 0.04,
-        transparent: true,
-        opacity: 0.0,
-      }),
+      new THREE.PointsMaterial({ color: 0xc8a96e, size: 0.04, transparent: true, opacity: 0 }),
     );
     scene.add(particles);
     particlesRef.current = particles;
@@ -466,18 +292,20 @@ export default function AMDS() {
       const t = clock.getElapsedTime();
       astMesh.rotation.y = t * 0.04;
       astMesh.rotation.x = t * 0.01;
-      shipGroup.children[1].material.emissiveIntensity =
-        0.2 + Math.sin(t * 2) * 0.1;
-      shipGroup.children[2].material.emissiveIntensity =
-        0.2 + Math.sin(t * 2) * 0.1;
+      // Shimmer whatever solar arrays this ship happens to have. Tagged in
+      // userData rather than found by child index, because every ship has a
+      // different number of them.
+      for (const panel of shipRef.current?.userData?.panels ?? []) {
+        panel.material.emissiveIntensity = 0.2 + Math.sin(t * 2) * 0.1;
+      }
       controls.update();
       renderer.render(scene, camera);
     };
     animate();
 
     const onResize = () => {
-      const w = mount.clientWidth,
-        h = mount.clientHeight;
+      const w = mount.clientWidth;
+      const h = mount.clientHeight;
       camera.aspect = w / h;
       camera.updateProjectionMatrix();
       renderer.setSize(w, h);
@@ -489,366 +317,215 @@ export default function AMDS() {
       controls.dispose();
       window.removeEventListener("resize", onResize);
       renderer.dispose();
-      if (mount.contains(renderer.domElement))
-        mount.removeChild(renderer.domElement);
+      if (mount.contains(renderer.domElement)) mount.removeChild(renderer.domElement);
     };
   }, []);
 
-  // ── Attach / detach helpers ──
-  const attachShip = useCallback(() => {
-    const ship = shipRef.current;
-    if (!ship || !asteroidMeshRef.current) return;
-    const worldPos = new THREE.Vector3();
-    ship.getWorldPosition(worldPos);
-    asteroidMeshRef.current.add(ship);
-    asteroidMeshRef.current.worldToLocal(worldPos);
-    ship.position.copy(worldPos);
-    ship.rotation.set(0, 0, 0);
-  }, []);
+  // ── Swap the ship in the viewport when a different one is picked ──
+  useEffect(() => {
+    const scene = sceneRef.current;
+    if (!scene || !ship) return;
 
-  const detachShip = useCallback(() => {
-    const ship = shipRef.current;
-    if (!ship || !sceneRef.current) return;
-    const worldPos = new THREE.Vector3();
-    ship.getWorldPosition(worldPos);
-    sceneRef.current.add(ship);
-    ship.position.copy(worldPos);
-  }, []);
+    const previous = shipRef.current;
+    if (previous) {
+      previous.parent?.remove(previous);
+      disposeShip(previous);
+    }
 
-  // ── AUTO MODE mission ──
-  const startMission = useCallback(() => {
-    if (!wasmReady || !missionStateRef.current) return;
-    setMissionActive(true);
-    setMissionPhase("TRANSIT");
-    addLog(`Launching toward ${selectedAsteroid.name}`);
-    addLog(`Transfer ΔV required: ${telemetry.transfer_dv.toFixed(0)} m/s`);
+    const mesh = buildShip(ship.model, { dryMassTons: ship.dry_mass_tons });
+    mesh.position.set(0, 0.5, 4);
+    scene.add(mesh);
+    shipRef.current = mesh;
+    phaseRef.current = null;
+  }, [ship]);
 
-    let phase = "TRANSIT";
-    let transitProgress = 0;
-    const ship = shipRef.current;
-    const particles = particlesRef.current;
-    if (ship?.userData?.thruster)
-      ship.userData.thruster.material.emissiveIntensity = 2.0;
+  // How fast a manual command plays, in days per second. Set per phase so a
+  // long cruise and a short anchoring both take about six seconds.
+  const manualPaceRef = useRef(10);
 
-    tickRef.current = setInterval(() => {
-      const state = missionStateRef.current;
-      if (!state) return;
+  // ── The clock. One input, the day. ──
+  useEffect(() => {
+    if (!frames) return;
+    if (!playing && manualTarget == null) return;
 
-      if (phase === "TRANSIT") {
-        transitProgress += 0.015;
-        if (ship) {
-          ship.position.z = 4 - transitProgress * 2.5;
-          ship.position.y = 0.5 + Math.sin(transitProgress * Math.PI) * 0.3;
+    const stepMs = 80;
+    const id = setInterval(() => {
+      setDay((d) => {
+        const perSecond = manualTarget != null ? manualPaceRef.current : speed;
+        const next = Math.min(d + (perSecond * stepMs) / 1000, total);
+        if (manualTarget != null && next >= manualTarget) {
+          return manualTarget;
         }
-        if (transitProgress >= 1) {
-          phase = "MINING";
-          setMissionPhase("MINING");
-          addLog("Arrived at target. Beginning extraction.");
-          if (ship?.userData?.thruster)
-            ship.userData.thruster.material.emissiveIntensity = 0.3;
-          if (particles) particles.material.opacity = 0.8;
-          if (ship && asteroidMeshRef.current) {
-            const worldPos = new THREE.Vector3();
-            ship.getWorldPosition(worldPos);
-            asteroidMeshRef.current.add(ship);
-            asteroidMeshRef.current.worldToLocal(worldPos);
-            ship.position.copy(worldPos);
-            ship.rotation.set(0, 0, 0);
-          }
-        }
-      } else if (phase === "MINING") {
-        state.tick(6.0);
-        if (particles) {
-          const p = particles.geometry.attributes.position;
-          for (let i = 0; i < p.count; i++) {
-            p.setX(i, p.getX(i) + (Math.random() - 0.5) * 0.02);
-            p.setY(i, p.getY(i) + Math.random() * 0.03);
-            p.setZ(i, p.getZ(i) + (Math.random() - 0.5) * 0.02);
-            if (Math.abs(p.getY(i)) > 0.8) {
-              p.setX(i, (Math.random() - 0.5) * 0.3);
-              p.setY(i, -0.3);
-              p.setZ(i, (Math.random() - 0.5) * 0.3);
-            }
-          }
-          p.needsUpdate = true;
-        }
-        setTelemetry({
-          fuel_kg: Math.round(state.fuel_kg * 10) / 10,
-          ore_kg: Math.round(state.ore_kg * 10) / 10,
-          delta_v: Math.round(state.delta_v()),
-          transfer_dv: Math.round(state.transfer_delta_v()),
-          mission_score: Math.round(state.mission_score()),
-          time_to_capacity: Math.round(
-            state.time_to_capacity(shipConfig.ore_capacity),
-          ),
-          mission_time_s: Math.round(state.mission_time_s),
-          extraction_rate: state.extraction_rate,
-        });
-        if (state.ore_kg >= shipConfig.ore_capacity || state.fuel_kg <= 10) {
-          phase = "RETURNING";
-          setMissionPhase("RETURNING");
-          addLog(
-            state.ore_kg >= shipConfig.ore_capacity
-              ? "Ore capacity reached. Returning to base."
-              : "Low fuel warning. Aborting mining.",
-          );
-          detachShip();
-          if (particles) particles.material.opacity = 0;
-          if (ship?.userData?.thruster)
-            ship.userData.thruster.material.emissiveIntensity = 2.0;
-        }
-      } else if (phase === "RETURNING") {
-        transitProgress -= 0.015;
-        if (ship) {
-          ship.position.z = 4 - transitProgress * 2.5;
-          ship.position.y = 0.5 + Math.sin(transitProgress * Math.PI) * 0.3;
-        }
-        if (transitProgress <= 0) {
-          phase = "COMPLETE";
-          setMissionPhase("COMPLETE");
-          setMissionActive(false);
-          clearInterval(tickRef.current);
-          addLog(
-            `Mission complete! Score: ${Math.round(missionStateRef.current?.mission_score() ?? 0)}/100`,
-          );
-          addLog(
-            `Ore recovered: ${Math.round(missionStateRef.current?.ore_kg ?? 0)} kg`,
-          );
-          if (ship?.userData?.thruster)
-            ship.userData.thruster.material.emissiveIntensity = 0;
-        }
-      }
-    }, 200);
-  }, [
-    wasmReady,
-    selectedAsteroid,
-    shipConfig,
-    telemetry.transfer_dv,
-    addLog,
-    detachShip,
-  ]);
+        return next;
+      });
+    }, stepMs);
+    return () => clearInterval(id);
+  }, [frames, playing, manualTarget, speed, total]);
 
-  // ── MANUAL MODE ──
-  const startManualMission = useCallback(() => {
-    if (!wasmReady || !missionStateRef.current) return;
-    setMissionActive(true);
+  // Reaching a manual waypoint, or the end, stops the clock.
+  useEffect(() => {
+    if (manualTarget != null && day >= manualTarget) setManualTarget(null);
+  }, [day, manualTarget]);
+
+  useEffect(() => {
+    if (done && playing) setPlaying(false);
+  }, [done, playing]);
+
+  // ── A phase change is the only thing that logs or moves the ship on the rock ──
+  useEffect(() => {
+    if (!frames || !mission) return;
+    if (phaseRef.current === mission.phase) return;
+    phaseRef.current = mission.phase;
+
+    addLog(phaseLogLine(frames[mission.index]));
+
+    const mesh = shipRef.current;
+    if (!mesh) return;
+
+    setThrust(
+      mesh,
+      mission.phase === "TRANSIT" || mission.phase === "RETURNING"
+        ? 2
+        : mission.phase === "APPROACH"
+          ? 0.8
+          : 0,
+    );
+    if (particlesRef.current) {
+      particlesRef.current.material.opacity =
+        mission.phase === "DRILLING" || mission.phase === "EXTRACTING" ? 0.8 : 0;
+    }
+
+    const rock = asteroidMeshRef.current;
+    if (mission.attached && rock && mesh.parent !== rock) {
+      const world = new THREE.Vector3();
+      mesh.getWorldPosition(world);
+      rock.add(mesh);
+      rock.worldToLocal(world);
+      mesh.position.copy(world);
+      mesh.rotation.set(0, 0, 0);
+    } else if (!mission.attached && sceneRef.current && mesh.parent !== sceneRef.current) {
+      const world = new THREE.Vector3();
+      mesh.getWorldPosition(world);
+      sceneRef.current.add(mesh);
+      mesh.position.copy(world);
+    }
+  }, [frames, mission, addLog]);
+
+  // ── Where the ship sits on the way out and the way home ──
+  useEffect(() => {
+    if (!mission || mission.attached) return;
+    const mesh = shipRef.current;
+    if (!mesh) return;
+    const away =
+      mission.phase === "TRANSIT"
+        ? mission.phase_progress
+        : mission.phase === "RETURNING"
+          ? 1 - mission.phase_progress
+          : mission.phase === "STANDBY" || mission.phase === "COMPLETE"
+            ? 0
+            : 1;
+    mesh.position.z = 4 - away * 2.5;
+    mesh.position.y = 0.5 + Math.sin(away * Math.PI) * 0.3;
+  }, [mission]);
+
+  // ── Commands ──
+  const launch = useCallback(async () => {
+    if (!ship || !asteroid) return;
+    const out = await ask("simulate_mission", {
+      asteroid_id: asteroid.id,
+      ship_id: ship.id,
+      tons: tonnage,
+    });
+    if (out.error) {
+      addLog(`Refused: ${out.error}. ${out.hint ?? ""}`);
+      return;
+    }
+    setSim(out);
+    setDay(0);
     setManualStep(0);
-    setManualPhase("STANDBY");
-    setAwaitingConfirm(true);
-    addLog("Manual mode active. Awaiting operator commands.");
-    addLog(`Signal delay: ${commDelay} min each way`);
-  }, [wasmReady, addLog, commDelay]);
+    setManualTarget(null);
+    phaseRef.current = null;
+    setLog([
+      {
+        t: "00:00",
+        msg: `${ship.name} cleared for ${asteroid.name} with ${tonnage.toLocaleString("en-US")} tons planned over ${out.totals.mission_days} days.`,
+      },
+    ]);
+    setPlaying(!manualMode);
+  }, [ship, asteroid, tonnage, manualMode, addLog]);
 
-  const executeManualStep = useCallback(() => {
+  const advanceManual = useCallback(() => {
+    if (!frames) return;
     const step = MANUAL_STEPS[manualStep];
     if (!step) return;
+    const frame = frames.find((f) => f.phase === step.phase);
+    if (!frame) {
+      setManualStep((i) => i + 1);
+      return;
+    }
+    // Each command takes about the same wall time whatever the phase costs in
+    // days, so a 265 day cruise does not stall the demo. The day counter still
+    // shows the truth.
+    manualPaceRef.current = Math.max(frame.duration_days / MANUAL_SECONDS_PER_PHASE, 0.05);
+    setDay(Math.max(frame.start_day, day));
+    setManualTarget(Math.max(frame.end_day - 0.001, frame.start_day));
+    setManualStep((i) => i + 1);
+  }, [frames, manualStep, day]);
 
-    setAwaitingConfirm(false);
-    setManualPhase(step.key);
-    setMissionPhase(step.key);
-    addLog(`CMD SENT: ${step.label}`);
-    addLog(`Signal delay: ~${commDelay}min. Awaiting confirmation...`);
-
-    const ship = shipRef.current;
-    const particles = particlesRef.current;
-    const state = missionStateRef.current;
-
-    // Simulate comm delay then execute
-    setTimeout(
-      () => {
-        addLog(`ACK: ${step.label} confirmed.`);
-
-        if (step.key === "TRANSIT") {
-          let transitProgress = 0;
-          if (ship?.userData?.thruster)
-            ship.userData.thruster.material.emissiveIntensity = 2.0;
-          tickRef.current = setInterval(() => {
-            transitProgress += 0.015;
-            if (ship) {
-              ship.position.z = 4 - transitProgress * 2.5;
-              ship.position.y = 0.5 + Math.sin(transitProgress * Math.PI) * 0.3;
-            }
-            if (transitProgress >= 1) {
-              clearInterval(tickRef.current);
-              if (ship?.userData?.thruster)
-                ship.userData.thruster.material.emissiveIntensity = 0.2;
-              addLog("Transit complete. In approach corridor.");
-              setManualStep((s) => s + 1);
-              setAwaitingConfirm(true);
-            }
-          }, 200);
-        } else if (step.key === "APPROACH") {
-          addLog("Matching rotation rate... approach nominal.");
-          setTimeout(() => {
-            addLog("Rendezvous achieved. Ready for anchor deployment.");
-            setManualStep((s) => s + 1);
-            setAwaitingConfirm(true);
-          }, 3000);
-        } else if (step.key === "ANCHORING") {
-          addLog("Harpoon fired. Tether tensioning...");
-          setTimeout(() => {
-            attachShip();
-            if (particles) particles.material.opacity = 0.3;
-            addLog("Anchors locked. Surface contact confirmed.");
-            setManualStep((s) => s + 1);
-            setAwaitingConfirm(true);
-          }, 2500);
-        } else if (step.key === "DRILLING") {
-          addLog("Drill head deploying... surface contact.");
-          setTimeout(() => {
-            if (particles) particles.material.opacity = 0.7;
-            addLog("Drilling active. Core sample depth: 2.4m");
-            setManualStep((s) => s + 1);
-            setAwaitingConfirm(true);
-          }, 2000);
-        } else if (step.key === "EXTRACTING") {
-          // Run extraction ticks
-          if (particles) particles.material.opacity = 0.9;
-          addLog("Extraction pipeline active.");
-          tickRef.current = setInterval(() => {
-            if (!state) return;
-            state.tick(6.0);
-            const p = particles?.geometry?.attributes?.position;
-            if (p) {
-              for (let i = 0; i < p.count; i++) {
-                p.setX(i, p.getX(i) + (Math.random() - 0.5) * 0.02);
-                p.setY(i, p.getY(i) + Math.random() * 0.03);
-                p.setZ(i, p.getZ(i) + (Math.random() - 0.5) * 0.02);
-                if (Math.abs(p.getY(i)) > 0.8) {
-                  p.setX(i, (Math.random() - 0.5) * 0.3);
-                  p.setY(i, -0.3);
-                  p.setZ(i, (Math.random() - 0.5) * 0.3);
-                }
-              }
-              p.needsUpdate = true;
-            }
-            setTelemetry({
-              fuel_kg: Math.round(state.fuel_kg * 10) / 10,
-              ore_kg: Math.round(state.ore_kg * 10) / 10,
-              delta_v: Math.round(state.delta_v()),
-              transfer_dv: Math.round(state.transfer_delta_v()),
-              mission_score: Math.round(state.mission_score()),
-              time_to_capacity: Math.round(
-                state.time_to_capacity(shipConfig.ore_capacity),
-              ),
-              mission_time_s: Math.round(state.mission_time_s),
-              extraction_rate: state.extraction_rate,
-            });
-            if (
-              state.ore_kg >= shipConfig.ore_capacity ||
-              state.fuel_kg <= 10
-            ) {
-              clearInterval(tickRef.current);
-              if (particles) particles.material.opacity = 0;
-              addLog(`Hold capacity reached: ${Math.round(state.ore_kg)} kg.`);
-              addLog("Ready for return burn.");
-              setManualStep((s) => s + 1);
-              setAwaitingConfirm(true);
-            }
-          }, 200);
-        } else if (step.key === "RETURNING") {
-          detachShip();
-          if (ship?.userData?.thruster)
-            ship.userData.thruster.material.emissiveIntensity = 2.0;
-          if (particles) particles.material.opacity = 0;
-          addLog("Anchors released. Return burn initiated.");
-          let retProgress = 1;
-          tickRef.current = setInterval(() => {
-            retProgress -= 0.015;
-            if (ship) {
-              ship.position.z = 4 - retProgress * 2.5;
-              ship.position.y = 0.5 + Math.sin(retProgress * Math.PI) * 0.3;
-            }
-            if (retProgress <= 0) {
-              clearInterval(tickRef.current);
-              if (ship?.userData?.thruster)
-                ship.userData.thruster.material.emissiveIntensity = 0;
-              setMissionPhase("COMPLETE");
-              setManualPhase("COMPLETE");
-              setMissionActive(false);
-              addLog(
-                `Mission complete! Score: ${Math.round(state?.mission_score() ?? 0)}/100`,
-              );
-              addLog(`Ore recovered: ${Math.round(state?.ore_kg ?? 0)} kg`);
-            }
-          }, 200);
-        }
-      },
-      commDelay > 0 ? 1500 : 800,
-    );
-  }, [manualStep, commDelay, attachShip, detachShip, shipConfig, addLog]);
-
-  const resetMission = useCallback(() => {
-    clearInterval(tickRef.current);
-    setMissionActive(false);
-    setMissionPhase("STANDBY");
+  const reset = useCallback(() => {
+    setSim(null);
+    setDay(0);
+    setPlaying(false);
     setManualStep(0);
-    setManualPhase("STANDBY");
-    setAwaitingConfirm(false);
-    setLog([{ t: "00:00", msg: "System reset. Awaiting launch." }]);
-    setSystemStatus({
-      power: 98,
-      thermal: 72,
-      attitude: "NOMINAL",
-      signal: 100,
-    });
-
-    if (shipRef.current && sceneRef.current) {
-      sceneRef.current.add(shipRef.current);
-      shipRef.current.position.set(0, 0.5, 4);
-      shipRef.current.rotation.set(0, 0, 0);
+    setManualTarget(null);
+    phaseRef.current = null;
+    setLog([{ t: "00:00", msg: "Reset. Pick a target and a ship." }]);
+    const mesh = shipRef.current;
+    if (mesh && sceneRef.current) {
+      sceneRef.current.add(mesh);
+      mesh.position.set(0, 0.5, 4);
+      mesh.rotation.set(0, 0, 0);
+      setThrust(mesh, 0);
     }
-    if (shipRef.current?.userData?.thruster)
-      shipRef.current.userData.thruster.material.emissiveIntensity = 0;
     if (particlesRef.current) particlesRef.current.material.opacity = 0;
-    if (wasmRef.current) {
-      try {
-        missionStateRef.current?.free?.();
-        const state = new wasmRef.current.MissionState(
-          shipConfig.fuel_kg,
-          shipConfig.ship_mass_kg,
-          selectedAsteroid.dist_km,
-        );
-        missionStateRef.current = state;
-        setTelemetry({
-          fuel_kg: shipConfig.fuel_kg,
-          ore_kg: 0,
-          delta_v: state.delta_v(),
-          transfer_dv: state.transfer_delta_v(),
-          mission_score: 0,
-          time_to_capacity: state.time_to_capacity(shipConfig.ore_capacity),
-          mission_time_s: 0,
-          extraction_rate: 0.8,
-        });
-      } catch (e) {
-        console.error(e);
+  }, []);
+
+  const scrub = useCallback((value) => {
+    setPlaying(false);
+    setManualTarget(null);
+    setDay(value);
+  }, []);
+
+  // ── Render ──
+  const phase = mission?.phase ?? "STANDBY";
+  const phaseColor = PHASE_COLORS[phase] ?? "#8892a4";
+  const totals = sim?.totals ?? null;
+
+  const visible = useMemo(() => {
+    if (!rocks) return [];
+    return rocks.filter((r) => {
+      if (filter === "water") return (r.water_fraction ?? 0) >= 0.05;
+      if (filter === "metal") return ["M", "X", "E"].includes(r.composition_class);
+      if (filter === "reachable") {
+        return envelope ? r.delta_v_km_s * 1000 <= (envelope.delta_v_capacity_km_s ?? 0) * 1000 : true;
       }
-    }
-  }, [shipConfig, selectedAsteroid]);
+      return true;
+    });
+  }, [rocks, filter, envelope]);
 
-  const phaseColor = PHASE_COLORS[missionPhase] ?? "#8892a4";
-  const fuelPct = Math.round((telemetry.fuel_kg / shipConfig.fuel_kg) * 100);
-  const orePct = Math.round((telemetry.ore_kg / shipConfig.ore_capacity) * 100);
-  const dvSufficient = telemetry.delta_v >= telemetry.transfer_dv;
-
-  const currentManualStep = MANUAL_STEPS[manualStep];
-  const isComplete = missionPhase === "COMPLETE" || manualPhase === "COMPLETE";
+  const nextStep = MANUAL_STEPS[manualStep];
 
   return (
     <div className="amds-root">
-      {/* TOP BAR */}
       <div className="amds-topbar">
         <div className="amds-topbar-left">
           <button className="amds-btn-back" onClick={() => navigate(-1)}>
-            ← Back
+            Back
           </button>
           <div className="amds-title-group">
             <div
               className="amds-status-dot"
-              style={{
-                background: phaseColor,
-                boxShadow: `0 0 8px ${phaseColor}`,
-              }}
+              style={{ background: phaseColor, boxShadow: `0 0 8px ${phaseColor}` }}
             />
             <span className="amds-title">Mining Operations Dashboard</span>
           </div>
@@ -860,37 +537,35 @@ export default function AMDS() {
               color: phaseColor,
             }}
           >
-            {missionPhase}
+            {phase}
           </div>
-          {wasmReady && <div className="amds-wasm-badge">⚙ RUST WASM</div>}
-          {commDelay > 0 && (
-            <div
-              style={{
-                fontSize: "0.6rem",
-                color: "rgba(200,169,110,0.7)",
-                letterSpacing: "0.1em",
-              }}
-            >
-              📡 {commDelay}min signal delay
-            </div>
-          )}
+          {fleet && <div className="amds-wasm-badge">RUST WASM</div>}
         </div>
+
         <div className="amds-topbar-right">
           {[
             {
-              label: "Delta-V Budget",
-              val: `${telemetry.delta_v.toFixed(0)} m/s`,
-              ok: dvSufficient,
-            },
-            {
-              label: "Transfer ΔV",
-              val: `${telemetry.transfer_dv.toFixed(0)} m/s`,
+              label: "Delta v needed",
+              val: asteroid ? `${asteroid.delta_v_km_s} km/s` : "pick a target",
               ok: true,
             },
             {
-              label: "Mission Score",
-              val: `${telemetry.mission_score}/100`,
-              ok: telemetry.mission_score > 50,
+              label: "Delta v aboard",
+              val: envelope?.delta_v_capacity_km_s
+                ? `${envelope.delta_v_capacity_km_s} km/s`
+                : "not published",
+              ok: Boolean(envelope?.delta_v_capacity_km_s),
+            },
+            {
+              label: totals ? "Profit" : "Feasible",
+              val: totals
+                ? money(totals.profit_usd)
+                : check
+                  ? check.feasible
+                    ? "yes"
+                    : "no"
+                  : "pick a ship",
+              ok: totals ? totals.profit_usd > 0 : Boolean(check?.feasible),
             },
           ].map(({ label, val, ok }) => (
             <div key={label} className="amds-stat">
@@ -901,171 +576,109 @@ export default function AMDS() {
         </div>
       </div>
 
-      {/* MAIN */}
       <div className="amds-main">
-        {/* LEFT SIDEBAR */}
+        {/* LEFT: what to fly, where to, and how much */}
         <div className="amds-sidebar">
-          {/* Target selection */}
-          <div className="amds-section" style={{ paddingBottom: "0.5rem" }}>
-            <span className="amds-section-label">Target Asteroid</span>
-            {ASTEROIDS.filter((a) => visitedIds.includes(a.id)).map((a) => (
-              <div
-                key={a.id}
-                className="amds-target-item"
-                onClick={() => {
-                  if (!missionActive) {
-                    setSelectedAsteroid(a);
-                    setVisitedIds((prev) =>
-                      prev.includes(a.id) ? prev : [...prev, a.id],
-                    );
-                  }
-                }}
-                style={{
-                  cursor: missionActive ? "not-allowed" : "pointer",
-                  background:
-                    selectedAsteroid.id === a.id
-                      ? "rgba(104,211,145,0.1)"
-                      : "rgba(255,255,255,0.02)",
-                  border: `1px solid ${selectedAsteroid.id === a.id ? "rgba(104,211,145,0.35)" : "rgba(104,211,145,0.06)"}`,
-                  opacity:
-                    missionActive && selectedAsteroid.id !== a.id ? 0.4 : 1,
-                }}
-              >
-                <div className="amds-target-header">
-                  <span className="amds-target-name">{a.name}</span>
-                  <span
-                    className="amds-target-type"
-                    style={{ color: pgmColor(a.pgm) }}
-                  >
-                    {a.type}
-                  </span>
-                </div>
-                <div className="amds-target-meta">
-                  {(a.dist_km / 1e6).toFixed(0)}M km · PGM {a.pgm}%
-                </div>
-              </div>
-            ))}
-          </div>
+          {engineError && <div className="amds-ship-error">{engineError}</div>}
 
-          {/* Ship config */}
-          <div className="amds-section" style={{ paddingBottom: "0.5rem" }}>
-            <span className="amds-section-label">Ship Configuration</span>
-            {[
-              {
-                label: "Fuel (kg)",
-                key: "fuel_kg",
-                min: 200,
-                max: 2000,
-                step: 50,
-              },
-              {
-                label: "Ship Mass (kg)",
-                key: "ship_mass_kg",
-                min: 500,
-                max: 8000,
-                step: 100,
-              },
-              {
-                label: "Ore Capacity (kg)",
-                key: "ore_capacity",
-                min: 100,
-                max: 5000,
-                step: 100,
-              },
-            ].map(({ label, key, min, max, step }) => (
-              <div key={key} className="amds-slider-row">
-                <div className="amds-slider-header">
-                  <span className="amds-slider-label">{label}</span>
-                  <span className="amds-slider-val">
-                    {shipConfig[key].toLocaleString()}
-                  </span>
-                </div>
-                <input
-                  type="range"
-                  className="amds-slider"
-                  min={min}
-                  max={max}
-                  step={step}
-                  value={shipConfig[key]}
-                  disabled={missionActive}
-                  style={{
-                    cursor: missionActive ? "not-allowed" : "pointer",
-                    opacity: missionActive ? 0.5 : 1,
-                  }}
-                  onChange={(e) =>
-                    setShipConfig((p) => ({
-                      ...p,
-                      [key]: parseFloat(e.target.value),
-                    }))
-                  }
-                />
-              </div>
-            ))}
-          </div>
-
-          {/* DV analysis */}
           <div className="amds-section" style={{ paddingBottom: "0.5rem" }}>
             <span className="amds-section-label">
-              ΔV Analysis <span className="amds-rust-note">(Rust)</span>
+              Target {rocks && <span className="amds-rust-note">({visible.length} of {rocks.length})</span>}
             </span>
-            {[
-              {
-                label: "Available ΔV",
-                val: `${telemetry.delta_v.toFixed(0)} m/s`,
-                color: dvSufficient ? "#68d391" : "#fc8181",
-              },
-              {
-                label: "Required ΔV",
-                val: `${telemetry.transfer_dv.toFixed(0)} m/s`,
-                color: "#8892a4",
-              },
-              {
-                label: "Margin",
-                val: `${(telemetry.delta_v - telemetry.transfer_dv).toFixed(0)} m/s`,
-                color: dvSufficient ? "#68d391" : "#fc8181",
-              },
-            ].map(({ label, val, color }) => (
-              <div key={label} className="amds-dv-row">
-                <span className="amds-dv-key">{label}</span>
-                <span className="amds-dv-val" style={{ color }}>
-                  {val}
-                </span>
-              </div>
-            ))}
-            {!dvSufficient && (
+            <div className="amds-filters">
+              {FILTERS.map((f) => (
+                <button
+                  key={f.id}
+                  className={"amds-filter" + (filter === f.id ? " amds-filter-on" : "")}
+                  onClick={() => setFilter(f.id)}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+            <div className="amds-target-list">
+              {visible.map((r) => (
+                <div
+                  key={r.id}
+                  className="amds-target-item"
+                  onClick={() => !flying && setAsteroidId(r.id)}
+                  style={{
+                    cursor: flying ? "not-allowed" : "pointer",
+                    background:
+                      asteroidId === r.id ? "rgba(104,211,145,0.1)" : "rgba(255,255,255,0.02)",
+                    border: `1px solid ${asteroidId === r.id ? "rgba(104,211,145,0.35)" : "rgba(104,211,145,0.06)"}`,
+                    opacity: flying && asteroidId !== r.id ? 0.4 : 1,
+                  }}
+                >
+                  <div className="amds-target-header">
+                    <span className="amds-target-name">{r.name}</span>
+                    <span className="amds-target-type">{r.composition_class}</span>
+                  </div>
+                  <div className="amds-target-meta">
+                    {r.delta_v_km_s} km/s · {r.round_trip_days} days
+                    {r.diameter_m ? ` · ${Math.round(r.diameter_m)} m` : ""}
+                    <span className="amds-src-tag">{sourceWord(r.composition_source)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="amds-section" style={{ paddingBottom: "0.5rem" }}>
+            <span className="amds-section-label">Ship</span>
+            <ShipPicker shipId={shipId} onPick={setShipId} disabled={flying} />
+          </div>
+
+          <div className="amds-section" style={{ paddingBottom: "0.5rem" }}>
+            <span className="amds-section-label">
+              Haul <span className="amds-rust-note">(Rust checks it)</span>
+            </span>
+            {hold == null ? (
               <div className="amds-dv-warning">
-                ⚠ Insufficient ΔV — increase fuel or reduce mass
+                This ship does not publish a hold size, so there is nothing to plan.
               </div>
+            ) : hold === 0 ? (
+              <div className="amds-dv-warning">
+                {ship?.name} has no hold at all. It can fly, it just cannot bring anything back.
+              </div>
+            ) : (
+              <>
+                <div className="amds-slider-row">
+                  <div className="amds-slider-header">
+                    <span className="amds-slider-label">Tons to bring home</span>
+                    <span className="amds-slider-val">{formatTons(tonnage)}</span>
+                  </div>
+                  <input
+                    type="range"
+                    className="amds-slider"
+                    min={hold / 1000}
+                    max={hold}
+                    step={hold / 1000}
+                    value={Math.min(tonnage, hold)}
+                    disabled={flying}
+                    onChange={(e) => setTonnage(parseFloat(e.target.value))}
+                  />
+                  <div className="amds-slider-ends">
+                    <span>{formatTons(hold / 1000)}</span>
+                    <span>hold {formatTons(hold)}</span>
+                  </div>
+                </div>
+
+                {check && <Feasibility check={check} />}
+              </>
             )}
           </div>
 
-          {/* Mode toggle + launch */}
           <div className="amds-launch-area">
-            {/* Mode toggle */}
-            {!missionActive && !isComplete && (
+            {!flying && (
               <div style={{ display: "flex", gap: 4, marginBottom: 8 }}>
                 {["Auto", "Manual"].map((m) => (
                   <button
                     key={m}
                     onClick={() => setManualMode(m === "Manual")}
-                    style={{
-                      flex: 1,
-                      padding: "0.35rem",
-                      borderRadius: 3,
-                      cursor: "pointer",
-                      fontSize: "0.65rem",
-                      letterSpacing: "0.1em",
-                      textTransform: "uppercase",
-                      fontFamily: "'DM Sans', sans-serif",
-                      fontWeight: 600,
-                      background:
-                        (m === "Manual") === manualMode
-                          ? "rgba(104,211,145,0.15)"
-                          : "rgba(255,255,255,0.03)",
-                      border: `1px solid ${(m === "Manual") === manualMode ? "rgba(104,211,145,0.4)" : "rgba(104,211,145,0.1)"}`,
-                      color:
-                        (m === "Manual") === manualMode ? "#68d391" : "#8892a4",
-                    }}
+                    className={
+                      "amds-mode-btn" + ((m === "Manual") === manualMode ? " amds-mode-on" : "")
+                    }
                   >
                     {m}
                   </button>
@@ -1073,135 +686,93 @@ export default function AMDS() {
               </div>
             )}
 
-            {isComplete ? (
+            {!flying ? (
               <button
-                className="amds-btn amds-btn-reset"
-                onClick={resetMission}
+                className={"amds-btn amds-btn-launch" + (canFly ? "" : " insufficient")}
+                disabled={!canFly}
+                onClick={launch}
               >
-                ↺ New Mission
+                {!fleet ? "Loading the engine" : canFly ? "Launch mission" : "Not possible"}
+              </button>
+            ) : done ? (
+              <button className="amds-btn amds-btn-reset" onClick={reset}>
+                New mission
               </button>
             ) : manualMode ? (
-              // MANUAL MODE UI
               <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                {!missionActive ? (
-                  <button
-                    className="amds-btn amds-btn-launch"
-                    disabled={!wasmReady || !dvSufficient}
-                    onClick={startManualMission}
-                  >
-                    {!wasmReady ? "Loading WASM..." : "▶ Begin Manual Mission"}
-                  </button>
-                ) : awaitingConfirm && currentManualStep ? (
+                {manualTarget != null ? (
+                  <div className="amds-executing">Executing. {phase.toLowerCase()}</div>
+                ) : nextStep ? (
                   <div>
-                    <div
-                      style={{
-                        fontSize: "0.6rem",
-                        color: "rgba(104,211,145,0.5)",
-                        letterSpacing: "0.12em",
-                        marginBottom: 4,
-                      }}
-                    >
-                      NEXT COMMAND
-                    </div>
-                    <div
-                      style={{
-                        fontSize: "0.7rem",
-                        color: "#e8edf5",
-                        marginBottom: 4,
-                      }}
-                    >
-                      {currentManualStep.desc}
-                    </div>
-                    <button
-                      onClick={executeManualStep}
-                      style={{
-                        width: "100%",
-                        padding: "0.6rem",
-                        borderRadius: 4,
-                        cursor: "pointer",
-                        background: "rgba(104,211,145,0.15)",
-                        border: "1px solid rgba(104,211,145,0.45)",
-                        color: "#68d391",
-                        fontSize: "0.68rem",
-                        letterSpacing: "0.1em",
-                        textTransform: "uppercase",
-                        fontFamily: "'DM Sans', sans-serif",
-                        fontWeight: 700,
-                      }}
-                    >
-                      {currentManualStep.label}
+                    <div className="amds-next-label">Next command</div>
+                    <div className="amds-next-desc">{nextStep.desc}</div>
+                    <button className="amds-btn amds-btn-command" onClick={advanceManual}>
+                      {nextStep.label}
                     </button>
                   </div>
                 ) : (
-                  <div
-                    style={{
-                      fontSize: "0.7rem",
-                      color: "#c8a96e",
-                      textAlign: "center",
-                      padding: "0.5rem",
-                    }}
-                  >
-                    ◉ Executing command...
-                  </div>
+                  <div className="amds-executing">Mission complete.</div>
                 )}
-
-                {/* Step progress */}
-                {missionActive && (
-                  <div style={{ display: "flex", gap: 3, marginTop: 4 }}>
-                    {MANUAL_STEPS.map((s, i) => (
-                      <div
-                        key={s.key}
-                        title={s.key}
-                        style={{
-                          flex: 1,
-                          height: 3,
-                          borderRadius: 2,
-                          background:
-                            i < manualStep
-                              ? "#68d391"
-                              : i === manualStep
-                                ? "#c8a96e"
-                                : "rgba(255,255,255,0.08)",
-                        }}
-                      />
-                    ))}
-                  </div>
-                )}
+                <div style={{ display: "flex", gap: 3, marginTop: 4 }}>
+                  {MANUAL_STEPS.map((s, i) => (
+                    <div
+                      key={s.phase}
+                      title={s.phase}
+                      style={{
+                        flex: 1,
+                        height: 3,
+                        borderRadius: 2,
+                        background:
+                          i < manualStep ? "#68d391" : i === manualStep ? "#c8a96e" : "rgba(255,255,255,0.08)",
+                      }}
+                    />
+                  ))}
+                </div>
+                <button className="amds-btn amds-btn-abort" onClick={reset}>
+                  Abort
+                </button>
               </div>
             ) : (
-              // AUTO MODE
-              <button
-                className={`amds-btn amds-btn-launch${missionActive ? " active" : !dvSufficient ? " insufficient" : ""}`}
-                disabled={!wasmReady || missionActive || !dvSufficient}
-                onClick={missionActive ? null : startMission}
-              >
-                {!wasmReady
-                  ? "Loading WASM..."
-                  : missionActive
-                    ? `◉ ${missionPhase}...`
-                    : "▶ Launch Mission"}
-              </button>
+              <div className="amds-auto-controls">
+                <button className="amds-btn amds-btn-launch" onClick={() => setPlaying((p) => !p)}>
+                  {playing ? "Pause" : "Resume"}
+                </button>
+                <div className="amds-speeds">
+                  {[1, 10, 100].map((s) => (
+                    <button
+                      key={s}
+                      className={"amds-speed" + (speed === s ? " amds-speed-on" : "")}
+                      onClick={() => setSpeed(s)}
+                    >
+                      {s}x
+                    </button>
+                  ))}
+                </div>
+                <button className="amds-btn amds-btn-abort" onClick={reset}>
+                  Abort
+                </button>
+              </div>
             )}
           </div>
         </div>
 
-        {/* VIEWPORT */}
+        {/* CENTRE: the viewport */}
         <div className="amds-viewport">
           <div ref={mountRef} className="amds-canvas" />
 
           <div className="amds-telemetry-overlay">
             <div className="amds-telemetry-title">Live Telemetry</div>
             {[
-              { label: "Target", val: selectedAsteroid.name },
+              { label: "Ship", val: ship?.name ?? "none" },
+              { label: "Target", val: asteroid?.name ?? "none" },
               {
-                label: "Distance",
-                val: `${(selectedAsteroid.dist_km / 1e6).toFixed(1)}M km`,
+                label: "Mission day",
+                val: frames ? `${Math.round(day)} of ${Math.round(total)}` : "on the pad",
               },
               {
-                label: "Mission Time",
-                val: `${Math.floor(telemetry.mission_time_s / 3600)}h ${Math.floor((telemetry.mission_time_s % 3600) / 60)}m`,
+                label: "Round trip",
+                val: asteroid ? `${asteroid.round_trip_days} days published` : "n/a",
               },
-              { label: "Signal", val: `${Math.round(systemStatus.signal)}%` },
             ].map(({ label, val }) => (
               <div key={label} className="amds-telemetry-row">
                 <span className="amds-telemetry-key">{label}</span>
@@ -1210,21 +781,51 @@ export default function AMDS() {
             ))}
           </div>
 
+          {frames && (
+            <div className="amds-strip-overlay">
+              <div className="amds-strip">
+                {frames.map((f, i) => (
+                  <div
+                    key={f.phase + i}
+                    className={"amds-strip-seg" + (i === mission.index ? " amds-strip-on" : "")}
+                    title={`${f.phase}, ${f.duration_days} days`}
+                    style={{
+                      flexGrow: Math.max(f.duration_days, total * 0.012),
+                      background:
+                        i <= mission.index ? PHASE_COLORS[f.phase] ?? "#8892a4" : "rgba(255,255,255,0.08)",
+                    }}
+                  />
+                ))}
+              </div>
+              <input
+                type="range"
+                className="amds-slider"
+                min={0}
+                max={total}
+                step={total / 2000}
+                value={day}
+                onChange={(e) => scrub(parseFloat(e.target.value))}
+                aria-label="mission day"
+              />
+              <div className="amds-strip-note">{mission.note}</div>
+            </div>
+          )}
+
           <div className="amds-bars-overlay">
             {[
               {
-                label: "Fuel",
-                pct: fuelPct,
-                val: `${telemetry.fuel_kg.toFixed(0)} kg`,
-                color: fuelPct > 30 ? "#68d391" : "#fc8181",
+                label: "Propellant",
+                pct: pct(mission?.propellant_tons, totals?.propellant_tons),
+                val: formatTons(mission?.propellant_tons ?? ship?.propellant_capacity_tons),
+                color: "#68d391",
               },
               {
                 label: "Ore",
-                pct: orePct,
-                val: `${telemetry.ore_kg.toFixed(0)} kg`,
+                pct: pct(mission?.cargo_tons, totals?.tons),
+                val: formatTons(mission?.cargo_tons ?? 0),
                 color: "#c8a96e",
               },
-            ].map(({ label, pct, val, color }) => (
+            ].map(({ label, pct: p, val, color }) => (
               <div key={label} className="amds-bar-row">
                 <div className="amds-bar-header">
                   <span className="amds-bar-label">{label}</span>
@@ -1235,11 +836,7 @@ export default function AMDS() {
                 <div className="amds-bar-track">
                   <div
                     className="amds-bar-fill"
-                    style={{
-                      width: `${pct}%`,
-                      background: color,
-                      boxShadow: `0 0 6px ${color}`,
-                    }}
+                    style={{ width: `${p}%`, background: color, boxShadow: `0 0 6px ${color}` }}
                   />
                 </div>
               </div>
@@ -1247,7 +844,7 @@ export default function AMDS() {
           </div>
 
           <div className="amds-hints">
-            {["⟳ Drag to rotate", "⊕ Scroll to zoom"].map((t) => (
+            {["Drag to rotate", "Scroll to zoom"].map((t) => (
               <span key={t} className="amds-hint">
                 {t}
               </span>
@@ -1255,145 +852,65 @@ export default function AMDS() {
           </div>
         </div>
 
-        {/* RIGHT PANEL */}
+        {/* RIGHT: the numbers and the log */}
         <div className="amds-right-panel">
-          {/* System status */}
           <div className="amds-section">
-            <span className="amds-section-label">Systems Status</span>
-            <div className="amds-gauges-grid">
-              {[
-                {
-                  label: "Fuel",
-                  val: `${telemetry.fuel_kg.toFixed(0)} kg`,
-                  pct: fuelPct,
-                  color: fuelPct > 30 ? "#68d391" : "#fc8181",
-                },
-                {
-                  label: "Ore Load",
-                  val: `${telemetry.ore_kg.toFixed(0)} kg`,
-                  pct: orePct,
-                  color: "#c8a96e",
-                },
-                {
-                  label: "Power",
-                  val: `${Math.round(systemStatus.power)}%`,
-                  pct: systemStatus.power,
-                  color: systemStatus.power > 50 ? "#68d391" : "#fc8181",
-                },
-                {
-                  label: "Thermal",
-                  val: `${Math.round(systemStatus.thermal)}°C`,
-                  pct: Math.min(100, systemStatus.thermal),
-                  color: systemStatus.thermal > 90 ? "#fc8181" : "#63b3ed",
-                },
-                {
-                  label: "Extraction",
-                  val: `${telemetry.extraction_rate} kg/s`,
-                  pct: ["MINING", "EXTRACTING"].includes(missionPhase)
-                    ? 100
-                    : 0,
-                  color: "#63b3ed",
-                },
-                {
-                  label: "Score",
-                  val: `${telemetry.mission_score}/100`,
-                  pct: telemetry.mission_score,
-                  color: "#a78bfa",
-                },
-              ].map(({ label, val, pct, color }) => (
-                <div key={label} className="amds-gauge">
-                  <div className="amds-gauge-label">{label}</div>
-                  <div className="amds-gauge-val" style={{ color }}>
-                    {val}
+            <span className="amds-section-label">
+              Mission <span className="amds-rust-note">(Rust)</span>
+            </span>
+            {totals ? (
+              <div className="amds-spec-table">
+                {[
+                  ["Delta v", `${totals.delta_v_km_s} km/s`],
+                  ["Mission length", `${totals.mission_days} days`],
+                  ["Propellant", formatTons(totals.propellant_tons)],
+                  ["Ore", formatTons(totals.tons)],
+                  ["Revenue", money(totals.revenue_usd)],
+                  ["Cost", money(totals.cost_usd)],
+                  ["Profit", money(totals.profit_usd)],
+                ].map(([k, v]) => (
+                  <div key={k} className="amds-spec-row">
+                    <span className="amds-spec-key">{k}</span>
+                    <span className="amds-spec-val">{v}</span>
                   </div>
-                  <div className="amds-gauge-track">
-                    <div
-                      className="amds-gauge-fill"
-                      style={{ width: `${pct}%`, background: color }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Attitude indicator */}
-            <div
-              style={{
-                marginTop: 8,
-                display: "flex",
-                justifyContent: "space-between",
-                padding: "0.3rem 0.4rem",
-                background: "rgba(255,255,255,0.02)",
-                borderRadius: 3,
-              }}
-            >
-              <span style={{ fontSize: "0.6rem", color: "#8892a4" }}>
-                Attitude Control
-              </span>
-              <span
-                style={{
-                  fontSize: "0.6rem",
-                  fontWeight: 700,
-                  color:
-                    systemStatus.attitude === "NOMINAL" ? "#68d391" : "#fc8181",
-                }}
-              >
-                {systemStatus.attitude}
-              </span>
-            </div>
-          </div>
-
-          {/* Target profile */}
-          <div className="amds-section">
-            <span className="amds-section-label">Target Profile</span>
-            <div className="amds-profile-name">{selectedAsteroid.name}</div>
-            {[
-              { label: "Spectral Type", val: selectedAsteroid.type },
-              {
-                label: "PGM Potential",
-                val: `${selectedAsteroid.pgm}%`,
-                color: pgmColor(selectedAsteroid.pgm),
-              },
-              {
-                label: "Distance",
-                val: `${(selectedAsteroid.dist_km / 1e6).toFixed(0)}M km`,
-              },
-              { label: "Est. Mass", val: selectedAsteroid.mass_est },
-              {
-                label: "Comm Delay",
-                val: `${commDelay} min`,
-                color: commDelay > 10 ? "#fc8181" : "#8892a4",
-              },
-              {
-                label: "Time to Fill",
-                val:
-                  telemetry.time_to_capacity > 0
-                    ? `${Math.round(telemetry.time_to_capacity / 60)}m`
-                    : "—",
-              },
-            ].map(({ label, val, color }) => (
-              <div key={label} className="amds-profile-row">
-                <span className="amds-profile-key">{label}</span>
-                <span
-                  className="amds-profile-val"
-                  style={{ color: color || "#e8edf5" }}
-                >
-                  {val}
-                </span>
+                ))}
               </div>
-            ))}
+            ) : (
+              <p className="amds-ship-status">
+                Pick a target, a ship and a haul. The engine works out whether it can be done before
+                you launch.
+              </p>
+            )}
           </div>
 
-          {/* Mission log */}
+          {asteroid && (
+            <div className="amds-section">
+              <span className="amds-section-label">Target profile</span>
+              <div className="amds-profile-name">{asteroid.name}</div>
+              <div className="amds-spec-table">
+                {[
+                  ["Class", `${asteroid.composition_class} (${sourceWord(asteroid.composition_source)})`],
+                  ["Delta v", `${asteroid.delta_v_km_s} km/s, JPL NHATS`],
+                  ["Round trip", `${asteroid.round_trip_days} days`],
+                  ["Diameter", asteroid.diameter_m ? `${Math.round(asteroid.diameter_m)} m` : "unknown"],
+                  ["Water fraction", asteroid.water_fraction != null ? `${(asteroid.water_fraction * 100).toFixed(0)}%` : "unknown"],
+                ].map(([k, v]) => (
+                  <div key={k} className="amds-spec-row">
+                    <span className="amds-spec-key">{k}</span>
+                    <span className="amds-spec-val">{v}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="amds-log-section">
-            <span className="amds-section-label">Mission Log</span>
+            <span className="amds-section-label">Mission log</span>
             <div className="amds-log-entries">
               {log.map((entry, i) => (
                 <div key={i} className="amds-log-entry">
                   <span className="amds-log-time">{entry.t}</span>
-                  <span
-                    className={`amds-log-msg${i === log.length - 1 ? " latest" : ""}`}
-                  >
+                  <span className={`amds-log-msg${i === log.length - 1 ? " latest" : ""}`}>
                     {entry.msg}
                   </span>
                 </div>
@@ -1405,3 +922,61 @@ export default function AMDS() {
     </div>
   );
 }
+
+/** Whether this ship can do this haul, in the engine's own words. */
+function Feasibility({ check }) {
+  if (check.error === "specs_not_published") {
+    return <div className="amds-dv-warning">{check.hint}</div>;
+  }
+  if (check.error) {
+    return <div className="amds-dv-warning">{check.hint ?? check.error}</div>;
+  }
+
+  const cargo = check.checks?.cargo;
+  const prop = check.checks?.propellant;
+
+  return (
+    <div className="amds-feas">
+      <div className={"amds-feas-head" + (check.feasible ? " ok" : " bad")}>
+        {check.feasible ? "This mission works" : `Blocked by ${check.binding_constraint.replace(/_/g, " ")}`}
+      </div>
+      <div className="amds-spec-table">
+        <div className="amds-spec-row">
+          <span className="amds-spec-key">Hold</span>
+          <span className={"amds-spec-val" + (cargo?.ok ? "" : " amds-feas-fail")}>
+            {formatTons(cargo?.needed_tons)} of {formatTons(cargo?.capacity_tons)}
+          </span>
+        </div>
+        <div className="amds-spec-row">
+          <span className="amds-spec-key">Propellant</span>
+          <span className={"amds-spec-val" + (prop?.ok ? "" : " amds-feas-fail")}>
+            {typeof prop?.needed_tons === "number" ? formatTons(prop.needed_tons) : "beyond reach"} of{" "}
+            {formatTons(prop?.capacity_tons)}
+          </span>
+        </div>
+        {check.profit_usd_if_flown != null && (
+          <div className="amds-spec-row">
+            <span className="amds-spec-key">Profit if flown</span>
+            <span className="amds-spec-val">{money(check.profit_usd_if_flown)}</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+const pct = (v, of) => (!of || v == null ? 0 : Math.max(0, Math.min(100, Math.round((v / of) * 100))));
+
+const money = (n) =>
+  n == null ? "n/a" : (n < 0 ? "minus $" : "$") + Math.abs(Math.round(n)).toLocaleString("en-US");
+
+function formatTons(tons) {
+  if (tons == null) return "n/a";
+  if (tons === 0) return "0 t";
+  if (tons < 0.001) return (tons * 1_000_000).toFixed(1) + " g";
+  if (tons < 1) return (tons * 1000).toFixed(1) + " kg";
+  return Math.round(tons).toLocaleString("en-US") + " t";
+}
+
+const sourceWord = (s) =>
+  s === "spectral_taxonomy" ? "measured" : s === "albedo_inference" ? "inferred" : "assumed";

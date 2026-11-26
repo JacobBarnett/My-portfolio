@@ -17,9 +17,12 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build && cp -r public/static-wasm build/static-wasm",
+    "build": "react-scripts build && mkdir -p build/static-wasm && cp -R public/static-wasm/. build/static-wasm/",
     "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "eject": "react-scripts eject",
+    "wasm:build": "wasm-pack build mining-physics --target web --out-dir pkg --release && cp mining-physics/pkg/mining_physics.js mining-physics/pkg/mining_physics_bg.wasm public/static-wasm/ && cp mining-physics/pkg/mining_physics.js mining-physics/pkg/mining_physics_bg.wasm mining-physics/pkg/mining_physics.d.ts src/wasm/",
+    "wasm:build:node": "wasm-pack build mining-physics --target nodejs --out-dir pkg-node --release",
+    "test:engine": "npm run wasm:build:node && node --test src/flight/playback.node-test.mjs"
   },
   "eslintConfig": {
     "extends": [
@@ -43,5 +46,11 @@
     "autoprefixer": "^10.4.24",
     "postcss": "^8.5.6",
     "tailwindcss": "^4.1.18"
+  },
+  "jest": {
+    "moduleNameMapper": {
+      "^react-router-dom$": "<rootDir>/node_modules/react-router-dom/dist/index.js",
+      "^react-router/dom$": "<rootDir>/node_modules/react-router/dist/development/dom-export.js"
+    }
   }
 }
