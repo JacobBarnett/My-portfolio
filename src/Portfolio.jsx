@@ -42,15 +42,17 @@ export default function Portfolio() {
       {/* HERO */}
       <section id="hero" className="hero-section port-section">
         <div className="hero-inner">
-          <span className="hero-tag">Available for hire</span>
+          <span className="hero-tag">Open to full time roles</span>
           <h1 className="hero-h1">
             Jacob
             <br />
             <em>Barnett</em>
           </h1>
           <p className="hero-sub">
-            Full Stack Web Developer — building thoughtful, performant
-            applications from idea to deployment.
+            Full Stack Software Engineer. I work on a live production Ruby on
+            Rails application for a real client, and I build the rest of what
+            is on this page on my own, from a Rust physics engine to a
+            business messaging platform with a mobile app.
           </p>
           <div className="hero-cta">
             <a href="#projects" className="btn btn-primary">
@@ -92,21 +94,31 @@ export default function Portfolio() {
               built on craft.
             </h2>
             <p>
-              I'm a <strong>Full Stack Web Developer</strong> and recent
-              graduate of Bloomtech's Full Stack Web Development program, with a
-              journey in software that started back in 2020 out of pure
-              curiosity.
+              I'm a <strong>Full Stack Software Engineer</strong>, currently
+              under contract on a{" "}
+              <strong>live production Ruby on Rails application</strong> that
+              serves real users, working with the founding team through an
+              active rebrand. I built a sandboxed local environment to study
+              the legacy codebase safely, audited it and surfaced findings the
+              client needed to know about, and I am now rebuilding the
+              frontend in React.
             </p>
             <p>
-              What began as a personal interest quickly grew into a serious
-              passion. I spent years exploring languages, building projects, and
-              developing the kind of self-directed problem-solving mindset that
-              only comes from <strong>learning by doing</strong>.
+              Before that I taught myself. I started in 2020 out of plain
+              curiosity, completed{" "}
+              <strong>BloomTech's Full Stack program in 2025</strong>, and in
+              between shipped things nobody assigned me: a business messaging
+              platform with a React Native companion app, and a physics engine
+              in Rust that runs in a browser tab. That is the habit I would
+              bring to a team.
             </p>
             <p>
-              I bring a <strong>strong work ethic</strong>, an eagerness to keep
-              growing, and the discipline to see every project through to the
-              finish line — no matter how challenging it gets.
+              What I care about most is work that holds up when someone looks
+              closely. The asteroid simulator on this page will tell you a
+              number is unpublished rather than guess at it, and will tell you
+              a mission is impossible rather than fake a result. I would
+              rather be <strong>correct and say so plainly</strong> than look
+              impressive and be wrong.
             </p>
           </div>
           <div className="about-stats reveal">
@@ -164,6 +176,8 @@ export default function Portfolio() {
                 {[
                   "Node.js",
                   "Express",
+                  "Ruby on Rails",
+                  "PostgreSQL",
                   "REST APIs",
                   "SQL",
                   "Knex.js",
@@ -183,6 +197,7 @@ export default function Portfolio() {
               <div className="skill-tags">
                 {[
                   "Git & GitHub",
+                  "Docker",
                   "VS Code",
                   "Vercel",
                   "Command Line",
@@ -487,8 +502,9 @@ export default function Portfolio() {
           <span className="section-label">Contact</span>
           <h2 className="section-title">Let's Build Something</h2>
           <p className="contact-sub">
-            I'm currently open to new opportunities. Whether you have a role in
-            mind or just want to connect, my inbox is always open.
+            I'm under contract and open to full time roles. Whether you have
+            something in mind or just want to connect, my inbox is always
+            open.
           </p>
           <a href="mailto:jakebarnett2000@gmail.com" className="contact-email">
             jakebarnett2000@gmail.com
