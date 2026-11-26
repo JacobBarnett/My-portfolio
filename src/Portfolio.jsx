@@ -1,6 +1,11 @@
 import { useEffect } from "react";
 import "./Portfolio.css";
 
+// Every project lives in this repository except the debt tracker, which has
+// its own. A "GitHub" link that lands on a profile page makes someone hunt
+// for the code and most will not bother, so each one points at the file.
+const REPO = "https://github.com/JacobBarnett/My-portfolio";
+
 export default function Portfolio() {
   useEffect(() => {
     const revealEls = document.querySelectorAll(".reveal");
@@ -55,6 +60,20 @@ export default function Portfolio() {
               Get in Touch
             </a>
           </div>
+          {/* The simulator was reachable only by clicking through the
+              asteroid browser, which nobody does in the minute they spend
+              here. It is the best thing on the site, so it gets a door. */}
+          <a
+            className="hero-feature-link"
+            href="/mining"
+            target="_blank"
+            rel="noreferrer"
+          >
+            <span className="hero-feature-dot" />
+            Fly an asteroid mining mission, run by a Rust engine in your
+            browser
+            <span className="hero-feature-arrow">→</span>
+          </a>
         </div>
         <div className="scroll-indicator">
           <span>Scroll</span>
@@ -96,8 +115,8 @@ export default function Portfolio() {
               <div className="stat-label">Years Coding</div>
             </div>
             <div className="stat-card">
-              <div className="stat-number">2024</div>
-              <div className="stat-label">Bloomtech Graduate</div>
+              <div className="stat-number">2025</div>
+              <div className="stat-label">BloomTech Graduate</div>
             </div>
             <div className="stat-card">
               <div className="stat-number">FS</div>
@@ -230,12 +249,12 @@ export default function Portfolio() {
                   Launch App →
                 </a>
                 <a
-                  href="https://github.com/JacobBarnett"
+                  href={REPO + "/blob/main/src/TeslaUI.jsx"}
                   target="_blank"
                   rel="noreferrer"
                   className="project-link"
                 >
-                  GitHub →
+                  Source →
                 </a>
               </div>
             </div>
@@ -263,12 +282,12 @@ export default function Portfolio() {
                   Launch App →
                 </a>
                 <a
-                  href="https://github.com/JacobBarnett"
+                  href={REPO + "/blob/main/src/RoboTaxi.jsx"}
                   target="_blank"
                   rel="noreferrer"
                   className="project-link"
                 >
-                  GitHub →
+                  Source →
                 </a>
               </div>
             </div>
@@ -308,20 +327,63 @@ export default function Portfolio() {
               </div>
             </div>
 
-            {/* AstroForge — Asteroid Mining Dashboard */}
+            {/* Asteroid Mining Simulator — the Rust engine */}
             <div className="project-card project-card--featured reveal">
               <div className="project-number">04</div>
               <div className="project-featured-badge">Featured</div>
               <div className="project-tag">
-                React · Three.js · Rust · NASA API
+                Rust · WebAssembly · Three.js · NASA JPL
+              </div>
+              <h3 className="project-title">Asteroid Mining Simulator</h3>
+              <p className="project-desc">
+                A physics engine written in Rust, compiled to WebAssembly, and
+                run entirely in the browser with no backend. It applies the
+                Tsiolkovsky rocket equation and Hohmann transfer delta v to
+                real near-Earth asteroids, then flies the mission you plan in
+                3D, one command at a time, with comm delay scaled to the real
+                distance.
+              </p>
+              <p className="project-desc">
+                Pick a target and pick a ship: four real spacecraft with
+                published specs, including OSIRIS-REx and Psyche, alongside
+                haulers that do not exist and say so. Every figure traces to a
+                cited source, an unpublished spec reads as unpublished rather
+                than as a guess, and the engine will tell you plainly that no
+                spacecraft ever flown could bring a ton of anything home.
+              </p>
+              <div className="project-links">
+                <a
+                  href="/mining"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="project-link project-link--primary"
+                >
+                  Launch Simulator →
+                </a>
+                <a
+                  href={REPO + "/tree/main/mining-physics"}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="project-link"
+                >
+                  Rust engine →
+                </a>
+              </div>
+            </div>
+
+            {/* Asteroid Mining Dashboard */}
+            <div className="project-card reveal">
+              <div className="project-number">05</div>
+              <div className="project-tag">
+                React · Three.js · NASA JPL · Serverless
               </div>
               <h3 className="project-title">Asteroid Mining Dashboard</h3>
               <p className="project-desc">
-                A mission-planning tool built for deep-space asteroid mining.
-                Visualize real near-Earth asteroid orbits in 3D, filter
-                candidates by delta-v cost and estimated platinum-group metal
-                content, and identify optimal launch windows — powered by NASA's
-                live Small Body Database.
+                The target browser that feeds the simulator. It pulls sixty
+                real near-Earth asteroids from NASA's JPL Close Approach API
+                through a serverless proxy, draws their orbits in 3D, and
+                filters them by delta v and diameter. Send a target through and
+                it opens in the simulator ready to plan.
               </p>
               <div className="project-links">
                 <a
@@ -333,19 +395,19 @@ export default function Portfolio() {
                   Launch App →
                 </a>
                 <a
-                  href="https://github.com/JacobBarnett"
+                  href={REPO + "/blob/main/src/AMD.jsx"}
                   target="_blank"
                   rel="noreferrer"
                   className="project-link"
                 >
-                  GitHub →
+                  Source →
                 </a>
               </div>
             </div>
 
             {/* Debt Settlement Tracker */}
             <div className="project-card reveal">
-              <div className="project-number">05</div>
+              <div className="project-number">06</div>
               <div className="project-tag">
                 React · TypeScript · PHP / Laravel · Go · MySQL
               </div>
@@ -496,7 +558,7 @@ export default function Portfolio() {
 
       {/* FOOTER */}
       <footer className="port-footer">
-        <p>Designed &amp; Built by Jacob Barnett &copy; 2025</p>
+        <p>Designed &amp; Built by Jacob Barnett &copy; 2026</p>
       </footer>
     </div>
   );

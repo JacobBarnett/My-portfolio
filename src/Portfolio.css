@@ -699,3 +699,56 @@ body {
     display: none;
   }
 }
+
+
+/* A single direct door to the simulator from the hero. It reads as a line
+   of text rather than a third button, so the two real calls to action
+   keep their weight. */
+.hero-feature-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 1.75rem;
+  padding: 0.55rem 0;
+  max-width: 520px;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  color: var(--muted);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: color 0.3s, border-color 0.3s;
+  opacity: 0;
+  animation: fadeUp 0.7s 0.7s ease forwards;
+}
+.hero-feature-link:hover {
+  color: var(--accent);
+  border-bottom-color: rgba(200, 169, 110, 0.4);
+}
+.hero-feature-dot {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 0 rgba(200, 169, 110, 0.6);
+  animation: heroPulse 2.4s ease-out infinite;
+}
+.hero-feature-arrow {
+  transition: transform 0.3s;
+}
+.hero-feature-link:hover .hero-feature-arrow {
+  transform: translateX(4px);
+}
+@keyframes heroPulse {
+  70% {
+    box-shadow: 0 0 0 7px rgba(200, 169, 110, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(200, 169, 110, 0);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-feature-dot {
+    animation: none;
+  }
+}
