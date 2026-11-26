@@ -7,22 +7,8 @@
 
 import { loadEngine } from "./engine.mjs";
 
-/** Everything the engine can answer. The Rust side owns this list. */
-export const TOOLS = [
-  "get_assumptions",
-  "list_ships",
-  "search_asteroids",
-  "get_asteroid_details",
-  "calculate_transfer",
-  "estimate_mining",
-  "estimate_profit",
-  "check_ship",
-  "compare_candidates",
-  "simulate_mission",
-];
-
 /**
- * @param {string} name one of TOOLS
+ * @param {string} name a tool the engine knows
  * @param {object} [input]
  * @returns {Promise<{name: string, input: object, output: object, ms: number, error: string|null}>}
  */
@@ -36,15 +22,10 @@ export async function callEngine(name, input = {}) {
     error: output && typeof output === "object" ? (output.error ?? null) : null,
   });
 
-  if (!TOOLS.includes(name)) {
-    return done({
-      error: "unknown_tool",
-      requested: name,
-      available: TOOLS,
-      hint: "That is not something the engine can answer.",
-    });
-  }
-
+  // There is deliberately no list of tool names here. There used to be, and it
+  // drifted the moment a tool was added to the Rust and not to the copy, which
+  // made a working tool look unavailable in the browser. The engine knows what
+  // it can answer and already returns a typed unknown_tool with the real list.
   let engine;
   try {
     engine = await loadEngine();

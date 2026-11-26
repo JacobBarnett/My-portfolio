@@ -943,3 +943,78 @@
   color: rgba(232, 237, 245, 0.55);
   margin-top: 0.2rem;
 }
+
+
+/* A lost WebGL context, shown as a recoverable failure rather than as a
+   broken canvas glyph. The numbers never depended on the viewport. */
+.amds-viewport-lost {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  text-align: center;
+  padding: 2rem;
+  background: rgba(3, 6, 8, 0.92);
+  backdrop-filter: blur(3px);
+  z-index: 5;
+}
+.amds-viewport-lost-title {
+  font-family: "DM Serif Display", serif;
+  font-size: 1.05rem;
+  color: #f6ad55;
+}
+.amds-viewport-lost p {
+  max-width: 34rem;
+  font-size: 0.74rem;
+  line-height: 1.6;
+  color: rgba(232, 237, 245, 0.6);
+  margin: 0;
+}
+.amds-viewport-lost .amds-btn {
+  max-width: 16rem;
+}
+
+
+/* The mission progress bar. Not a control: the playhead is driven by the
+   commands in manual mode and by play and speed in auto. */
+.amds-progress {
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  margin: 0.35rem 0 0.3rem;
+}
+.amds-progress-fill {
+  height: 100%;
+  background: #68d391;
+  box-shadow: 0 0 8px rgba(104, 211, 145, 0.6);
+  transition: width 0.12s linear;
+}
+
+.amds-strip-note {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.amds-strip-day {
+  color: rgba(232, 237, 245, 0.4);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* The fuel and ore bars used to sit under the timeline and collide with it. */
+.amds-bars-right {
+  left: auto !important;
+  right: 12px;
+  bottom: auto !important;
+  top: 12px;
+  width: 190px;
+  background: rgba(3, 6, 8, 0.7);
+  border: 1px solid rgba(104, 211, 145, 0.12);
+  border-radius: 4px;
+  padding: 0.5rem 0.6rem;
+  backdrop-filter: blur(4px);
+}

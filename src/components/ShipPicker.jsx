@@ -161,15 +161,20 @@ function Specs({ ship, envelope }) {
           " loaded"
         : null,
     ],
-    [
+  ];
+
+  // An invented hauler never brought anything home, so the row would be a lie
+  // either way it was filled in. It only belongs on a ship that flew.
+  if (ship.tier !== "speculative") {
+    rows.push([
       "Brought home for real",
       ship.sample_returned_kg != null
         ? ship.sample_returned_kg > 0
           ? grams(ship.sample_returned_kg)
           : "nothing, it is an orbiter"
         : null,
-    ],
-  ];
+    ]);
+  }
 
   return (
     <div className="amds-spec-table">

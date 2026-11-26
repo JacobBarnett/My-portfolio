@@ -74,6 +74,14 @@ export default function AMDS() {
   const [manualTarget, setManualTarget] = useState(null);
   const [log, setLog] = useState([{ t: "00:00", msg: "Awaiting a target and a ship." }]);
 
+  // The viewport can lose its WebGL context: the browser hands out a limited
+  // number and takes them back under pressure, which in development is reached
+  // easily because StrictMode mounts every effect twice and each hot reload
+  // builds another renderer. Rather than leave a dead canvas, the loss is
+  // caught and the scene can be rebuilt. Bumping sceneKey does that.
+  const [sceneKey, setSceneKey] = useState(0);
+  const [viewportLost, setViewportLost] = useState(false);
+
   const addLog = useCallback((msg) => {
     setLog((prev) => {
       const mins = Math.floor((prev.length * 3) / 60).toString().padStart(2, "0");
@@ -191,7 +199,11 @@ export default function AMDS() {
     camera.position.set(0, 5, 10);
     cameraRef.current = camera;
 
-    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    const renderer = new THREE.WebGLRenderer({
+      antialias: true,
+      alpha: true,
+      powerPreference: "high-performance",
+    });
     renderer.setSize(W, H);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -312,14 +324,39 @@ export default function AMDS() {
     };
     window.addEventListener("resize", onResize);
 
+    // Calling preventDefault is what makes a restore possible at all. Without
+    // it the browser never offers the context back.
+    const canvas = renderer.domElement;
+    const onContextLost = (event) => {
+      event.preventDefault();
+      cancelAnimationFrame(frameRef.current);
+      setViewportLost(true);
+    };
+    const onContextRestored = () => {
+      setViewportLost(false);
+      setSceneKey((k) => k + 1);
+    };
+    canvas.addEventListener("webglcontextlost", onContextLost);
+    canvas.addEventListener("webglcontextrestored", onContextRestored);
+
     return () => {
       cancelAnimationFrame(frameRef.current);
+      canvas.removeEventListener("webglcontextlost", onContextLost);
+      canvas.removeEventListener("webglcontextrestored", onContextRestored);
       controls.dispose();
       window.removeEventListener("resize", onResize);
+      // dispose alone leaves the GPU context alive until it is collected, so
+      // a double mount or a hot reload quietly leaks one every time. This
+      // hands it back immediately.
+      renderer.forceContextLoss();
       renderer.dispose();
       if (mount.contains(renderer.domElement)) mount.removeChild(renderer.domElement);
+      sceneRef.current = null;
+      shipRef.current = null;
+      particlesRef.current = null;
+      asteroidMeshRef.current = null;
     };
-  }, []);
+  }, [sceneKey]);
 
   // ── Swap the ship in the viewport when a different one is picked ──
   useEffect(() => {
@@ -337,7 +374,7 @@ export default function AMDS() {
     scene.add(mesh);
     shipRef.current = mesh;
     phaseRef.current = null;
-  }, [ship]);
+  }, [ship, sceneKey]);
 
   // How fast a manual command plays, in days per second. Set per phase so a
   // long cruise and a short anchoring both take about six seconds.
@@ -488,12 +525,6 @@ export default function AMDS() {
       setThrust(mesh, 0);
     }
     if (particlesRef.current) particlesRef.current.material.opacity = 0;
-  }, []);
-
-  const scrub = useCallback((value) => {
-    setPlaying(false);
-    setManualTarget(null);
-    setDay(value);
   }, []);
 
   // ── Render ──
@@ -760,6 +791,23 @@ export default function AMDS() {
         <div className="amds-viewport">
           <div ref={mountRef} className="amds-canvas" />
 
+          {viewportLost && (
+            <div className="amds-viewport-lost">
+              <div className="amds-viewport-lost-title">The 3D viewport lost its graphics context</div>
+              <p>
+                The browser took the WebGL context back, which it does when too many are open or
+                when the graphics driver resets. Nothing about the mission is affected: every number
+                on this page comes from the engine, not from the viewport.
+              </p>
+              <button className="amds-btn amds-btn-launch" onClick={() => {
+                setViewportLost(false);
+                setSceneKey((k) => k + 1);
+              }}>
+                Rebuild the viewport
+              </button>
+            </div>
+          )}
+
           <div className="amds-telemetry-overlay">
             <div className="amds-telemetry-title">Live Telemetry</div>
             {[
@@ -797,21 +845,33 @@ export default function AMDS() {
                   />
                 ))}
               </div>
-              <input
-                type="range"
-                className="amds-slider"
-                min={0}
-                max={total}
-                step={total / 2000}
-                value={day}
-                onChange={(e) => scrub(parseFloat(e.target.value))}
-                aria-label="mission day"
-              />
-              <div className="amds-strip-note">{mission.note}</div>
+              {/* A read only progress bar rather than a slider. Dragging the
+                  playhead fought with the manual commands, which are the point
+                  of manual mode, and there was nothing it could do that the
+                  pause and speed controls do not. */}
+              <div
+                className="amds-progress"
+                role="progressbar"
+                aria-label="mission progress"
+                aria-valuemin={0}
+                aria-valuemax={Math.round(total)}
+                aria-valuenow={Math.round(day)}
+              >
+                <div
+                  className="amds-progress-fill"
+                  style={{ width: `${total ? (day / total) * 100 : 0}%` }}
+                />
+              </div>
+              <div className="amds-strip-note">
+                <span>{mission.note}</span>
+                <span className="amds-strip-day">
+                  day {Math.round(day)} of {Math.round(total)}
+                </span>
+              </div>
             </div>
           )}
 
-          <div className="amds-bars-overlay">
+          <div className="amds-bars-overlay amds-bars-right">
             {[
               {
                 label: "Propellant",

@@ -22,7 +22,9 @@ export async function loadEngine() {
     const mod = await import(
       /* webpackIgnore: true */ "/static-wasm/mining_physics.js"
     );
-    await mod.default("/static-wasm/mining_physics_bg.wasm");
+    // wasm-bindgen deprecated the bare path argument. Passing the object
+    // keeps it quiet and is what the generated loader wants now.
+    await mod.default({ module_or_path: "/static-wasm/mining_physics_bg.wasm" });
     engine = mod;
     return mod;
   })();
